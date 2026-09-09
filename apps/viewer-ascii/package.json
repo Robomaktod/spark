@@ -1,0 +1,19 @@
+{
+  "name": "@spark/viewer-ascii",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Terminal replay player. ASCII first, because it makes engine bugs visible during development instead of after.",
+  "bin": {
+    "spark-view": "./dist/src/main.js"
+  },
+  "main": "./dist/src/main.js",
+  "dependencies": {
+    "@spark/protocol": "*",
+    "@spark/engine": "*",
+    "@spark/cli": "*"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

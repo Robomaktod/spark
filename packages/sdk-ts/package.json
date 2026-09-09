@@ -1,0 +1,12 @@
+{
+  "name": "@spark/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TypeScript helper library for writing Spark bots. The protocol is the contract; this is convenience.",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": { ".": "./dist/src/index.js" },
+  "dependencies": { "@spark/protocol": "*", "@spark/engine": "*" },
+  "scripts": { "build": "tsc -b" }
+}

@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/protocol" },
+    { "path": "packages/engine" },
+    { "path": "packages/sdk-ts" },
+    { "path": "apps/cli" },
+    { "path": "apps/viewer-ascii" },
+    { "path": "bots/naive" },
+    { "path": "bots/positional" }
+  ]
+}

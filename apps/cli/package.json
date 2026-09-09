@@ -1,0 +1,23 @@
+{
+  "name": "@spark/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Spark match runner: bot processes, timeouts, replay writing.",
+  "bin": {
+    "spark": "./dist/src/main.js"
+  },
+  "main": "./dist/src/main.js",
+  "dependencies": {
+    "@spark/protocol": "*",
+    "@spark/engine": "*"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "exports": {
+    ".": "./dist/src/main.js",
+    "./replay": "./dist/src/replay.js",
+    "./runner": "./dist/src/runner.js"
+  }
+}

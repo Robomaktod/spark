@@ -1,0 +1,12 @@
+{
+  "name": "@spark/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Spark simulation core. Pure TypeScript, integer maths, no I/O and no framework.",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": { ".": "./dist/src/index.js" },
+  "dependencies": { "@spark/protocol": "*" },
+  "scripts": { "build": "tsc -b" }
+}
