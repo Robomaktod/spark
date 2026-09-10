@@ -10,7 +10,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DEFAULT_RULES } from '@spark/protocol';
-import { Match, Spellbook } from '@spark/engine';
+import { ReplayPlayer } from '@spark/replay';
 import { runMatch, SpellbookRejected } from './runner.js';
 
 const NAIVE = ['node', resolve('bots/naive/dist/src/main.js')];
@@ -33,33 +33,49 @@ describe('match runner', { timeout: 180_000 }, () => {
     assert.equal(outcome.result.rounds.length, 4);
     assert.equal(outcome.result.scores.A + outcome.result.scores.B, 4);
     assert.ok(outcome.replay.turns.length > 20);
-    assert.ok(outcome.replay.events.length > 20, 'the replay carries the event log');
+    const events = outcome.replay.turns.flatMap((t): readonly unknown[] => t.events);
+    assert.ok(events.length > 20, 'the replay carries the structured event log');
+    assert.ok(outcome.replay.rounds.length === 4, 'and per-round metadata');
   });
 
-  it('produces a replay that reproduces the recorded result exactly', async () => {
+  it('produces a replay that reproduces every recorded state hash', async () => {
     const outcome = await runMatch({
       seed: 'reproduce',
       bots: { A: { name: 'naive', command: NAIVE }, B: { name: 'positional', command: POSITIONAL } },
     });
-    const replay = outcome.replay;
-    const match = new Match({
-      rules: replay.rules,
-      seed: replay.seed,
-      spellbooks: {
-        A: new Spellbook(replay.spellbooks.A, replay.rules),
-        B: new Spellbook(replay.spellbooks.B, replay.rules),
-      },
-    });
-    let i = 0;
-    while (!match.finished && i < replay.turns.length) {
-      match.drainOutbox();
-      const pending = match.pending;
-      if (!pending) break;
-      const recorded = replay.turns[i++]!;
-      assert.equal(recorded.side, pending.side, `turn ${i} went to the wrong side`);
-      match.submit(recorded.actions);
+    const player = new ReplayPlayer(outcome.replay);
+    let steps = 0;
+    while (!player.finished) {
+      // step(true) throws ReplayMismatch the moment a hash disagrees.
+      if (!player.step(true)) break;
+      steps++;
     }
-    assert.deepEqual(match.result, replay.result);
+    assert.equal(steps, outcome.replay.turns.length);
+  });
+
+  it('writes keyframes that seek to the same state as playing straight through', async () => {
+    const outcome = await runMatch({
+      seed: 'seeking',
+      bots: { A: { name: 'naive', command: NAIVE }, B: { name: 'positional', command: POSITIONAL } },
+    });
+    const replay = outcome.replay;
+    assert.ok(replay.keyframes.length > 0, 'a four-round match should produce keyframes');
+
+    const straight = new ReplayPlayer(replay);
+    const hashes: string[] = [];
+    while (!straight.finished) {
+      const frame = straight.step(false);
+      if (!frame) break;
+      hashes.push(frame.hash);
+    }
+
+    // Seek backwards through the match: each landing must match the forward run.
+    const seeker = new ReplayPlayer(replay);
+    for (const probe of [hashes.length - 1, 3, hashes.length - 10, 0, hashes.length - 4]) {
+      if (probe < 0 || probe >= hashes.length) continue;
+      seeker.seek(probe);
+      assert.equal(seeker.current?.hash, hashes[probe], `seek to ${probe} landed elsewhere`);
+    }
   });
 
   it('rejects a bot whose spellbook does not fit the page budget', async () => {
@@ -121,7 +137,7 @@ describe('match runner', { timeout: 180_000 }, () => {
     });
     assert.ok(lines.some((l) => l.includes('timed out')), 'the runner should report the timeout');
     assert.ok(
-      outcome.replay.turns.some((t) => t.side === 'A' && t.actions === null),
+      outcome.replay.turns.some((t: { side: string; actions: unknown }) => t.side === 'A' && t.actions === null),
       'the forfeited turn is recorded as null in the replay',
     );
     assert.equal(outcome.result.rounds.length, 4, 'the match still finishes all four rounds');
@@ -151,7 +167,7 @@ describe('match runner', { timeout: 180_000 }, () => {
       seed: 'spy',
       bots: { A: { name: 'spy', command: spy }, B: { name: 'spy2', command: spy } },
     });
-    const stderr = outcome.replay.turns.flatMap((t) => t.stderr).join('\n');
+    const stderr = outcome.replay.turns.flatMap((t): readonly string[] => t.stderr).join('\n');
     assert.ok(!stderr.includes('missing:[]') || true);
     assert.ok(DEFAULT_RULES.materials.stone.densityGPerCell === 2500);
     assert.equal(outcome.result.tiebreak, 'draw', 'two idle bots draw with no mana spent');

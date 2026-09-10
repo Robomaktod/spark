@@ -15,7 +15,7 @@
       "path": "../../packages/engine"
     },
     {
-      "path": "../cli"
+      "path": "../../packages/replay"
     }
   ]
 }

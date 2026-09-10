@@ -10,14 +10,14 @@
   "main": "./dist/src/main.js",
   "dependencies": {
     "@spark/protocol": "*",
-    "@spark/engine": "*"
+    "@spark/engine": "*",
+    "@spark/replay": "*"
   },
   "scripts": {
     "build": "tsc -b"
   },
   "exports": {
     ".": "./dist/src/main.js",
-    "./replay": "./dist/src/replay.js",
     "./runner": "./dist/src/runner.js"
   }
 }

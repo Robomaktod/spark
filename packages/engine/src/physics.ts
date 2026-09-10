@@ -31,6 +31,7 @@ import {
 } from './pricing.js';
 import { idivRound } from './fp.js';
 import { pushWizard } from './movement.js';
+import { PathRecorder } from './paths.js';
 
 export interface PhysicsContext {
   readonly world: World;
@@ -40,6 +41,8 @@ export interface PhysicsContext {
   readonly events: EngineEvent[];
   /** Called when a concentrated object is destroyed, so the link can be closed. */
   readonly onObjectLost: (obj: SparkObject, reason: string) => void;
+  /** Collects swept paths for smooth playback (web plan §6). */
+  readonly paths: PathRecorder;
 }
 
 export { temperatureRiseMilliC };
@@ -140,15 +143,26 @@ function destroyObject(ctx: PhysicsContext, obj: SparkObject, reason: string): v
  * object can cross a cell without being tested in it.
  */
 export function advanceObjects(ctx: PhysicsContext): void {
-  const { world, rules, wizards, events } = ctx;
+  const { world, rules, wizards, events, paths } = ctx;
   const moving = ctx.objects.filter((o) => !o.destroyed && !o.settled && o.speedMilli > 0);
   if (moving.length === 0) return;
 
   const N = substepsFor(moving);
   const tracks = new Map<number, Track>();
-  for (const o of moving) tracks.set(o.id, { baseX: o.xMilli, baseY: o.yMilli, baseK: 0 });
+  for (const o of moving) {
+    tracks.set(o.id, { baseX: o.xMilli, baseY: o.yMilli, baseK: 0 });
+    paths.begin(
+      o.id,
+      { objectId: o.id, owner: o.owner, material: o.material, spellId: o.spellId, cells: o.cells },
+      o.xMilli,
+      o.yMilli,
+      0,
+    );
+  }
 
   const sorted = [...moving].sort((a, b) => a.id - b.id);
+  /** Where in the turn substep k falls, in milli-turns. */
+  const at = (k: number): number => Math.round((k * 1000) / N);
 
   for (let k = 1; k <= N; k++) {
     for (const o of sorted) {
@@ -175,6 +189,8 @@ export function advanceObjects(ctx: PhysicsContext): void {
         events.push({ t: 'objects_collided', a: a.id, b: b.id, at: [midX, midY] as Vec, keMilliJ: combined });
         applyImpact(ctx, a, midX, midY, Math.trunc(combined / 2));
         applyImpact(ctx, b, midX, midY, Math.trunc(combined / 2));
+        paths.cut(a.id, a.xMilli, a.yMilli, at(k), 'collision');
+        paths.cut(b.id, b.xMilli, b.yMilli, at(k), 'collision');
         destroyObject(ctx, a, 'collided with another object');
         destroyObject(ctx, b, 'collided with another object');
         break;
@@ -213,7 +229,10 @@ export function advanceObjects(ctx: PhysicsContext): void {
           damageMilli: damage,
           overlap,
           impactCells: shapeCells,
+          keMilliJ: energy,
           at: [hx, hy] as Vec,
+          shape: impactCells.map(([dx, dy]) => [dx, dy] as Vec),
+          footprint: w.footprintCells().map(([x, y]) => [x, y] as Vec),
         });
         applyImpact(ctx, o, hx, hy, energy);
         const push = pushWizard(world, w, idivRound(o.massG * o.vxMilli, 1000), idivRound(o.massG * o.vyMilli, 1000), rules);
@@ -221,6 +240,7 @@ export function advanceObjects(ctx: PhysicsContext): void {
           events.push({ t: 'push', side: hitSide, cells: push.cells, hitWall: push.hitWall, damageMilli: push.damageMilliHp });
         }
         if (!w.alive) events.push({ t: 'death', side: hitSide });
+        paths.cut(o.id, o.xMilli, o.yMilli, at(k), 'wizard');
         destroyObject(ctx, o, 'hit a wizard');
         continue;
       }
@@ -267,9 +287,19 @@ export function advanceObjects(ctx: PhysicsContext): void {
           o.vxMilli = 0;
           o.vyMilli = 0;
           o.settled = true;
+          paths.cut(o.id, o.xMilli, o.yMilli, at(k), 'stopped');
         } else {
           o.vxMilli = idivRound(o.vxMilli * newSpeed, oldSpeed);
           o.vyMilli = idivRound(o.vyMilli * newSpeed, oldSpeed);
+          // The velocity changed, so this run ends and the next one begins here.
+          paths.cut(o.id, o.xMilli, o.yMilli, at(k), 'penetrated');
+          paths.begin(
+            o.id,
+            { objectId: o.id, owner: o.owner, material: o.material, spellId: o.spellId, cells: o.cells },
+            o.xMilli,
+            o.yMilli,
+            at(k),
+          );
           const tr = tracks.get(o.id)!;
           tr.baseX = o.xMilli;
           tr.baseY = o.yMilli;
@@ -282,6 +312,7 @@ export function advanceObjects(ctx: PhysicsContext): void {
         o.vxMilli = 0;
         o.vyMilli = 0;
         o.settled = true;
+        paths.cut(o.id, o.xMilli, o.yMilli, at(k), hitBoundary ? 'boundary' : 'stopped');
       }
     }
   }

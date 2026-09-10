@@ -56,6 +56,32 @@ export interface PendingTurn {
 
 const SIDES: readonly Side[] = ['A', 'B'];
 
+export interface RoundLayout {
+  readonly game: number;
+  readonly firstMover: Side;
+  /** Game 2 swaps the spawns, so each bot plays each start twice. */
+  readonly swap: boolean;
+}
+
+/**
+ * Which game a round belongs to, who moves first, and whether the spawns are
+ * swapped (passport §5.2). Exported because the replay player rebuilds rounds
+ * without going through Match, and the two must agree exactly.
+ */
+export function roundLayout(rules: Rules, roundNumber: number): RoundLayout {
+  const game = Math.ceil(roundNumber / rules.match.roundsPerGame);
+  const inGame = ((roundNumber - 1) % rules.match.roundsPerGame) + 1;
+  return { game, firstMover: inGame === 1 ? 'A' : 'B', swap: game > 1 };
+}
+
+/** The spawn pair for a round, after the game-2 swap. */
+export function spawnsForRound(
+  spawns: readonly [Vec2, Vec2],
+  layout: RoundLayout,
+): readonly [Vec2, Vec2] {
+  return layout.swap ? [spawns[1], spawns[0]] : [spawns[0], spawns[1]];
+}
+
 export class Match {
   readonly rules: Rules;
   readonly seed: string;
@@ -87,23 +113,14 @@ export class Match {
     this.startRound();
   }
 
-  /** Round r in 1..4: two games of two, spawns swapped for game 2. */
-  private layoutFor(roundNumber: number): {
-    game: number;
-    firstMover: Side;
-    swap: boolean;
-  } {
-    const game = Math.ceil(roundNumber / this.rules.match.roundsPerGame);
-    const inGame = ((roundNumber - 1) % this.rules.match.roundsPerGame) + 1;
-    return { game, firstMover: inGame === 1 ? 'A' : 'B', swap: game > 1 };
+  private layoutFor(roundNumber: number): RoundLayout {
+    return roundLayout(this.rules, roundNumber);
   }
 
   private buildArena(roundNumber: number): ArenaInfo {
-    const { swap } = this.layoutFor(roundNumber);
+    const layout = this.layoutFor(roundNumber);
     const map = generateMap(this.seed, this.rules, this.mapOptions);
-    const spawns: readonly [Vec2, Vec2] = swap
-      ? [map.spawns[1], map.spawns[0]]
-      : [map.spawns[0], map.spawns[1]];
+    const spawns = spawnsForRound(map.spawns, layout);
     return {
       width: map.world.width,
       height: map.world.height,
@@ -121,11 +138,9 @@ export class Match {
       return;
     }
 
-    const { game, firstMover, swap } = this.layoutFor(this.roundIndex);
+    const { game, firstMover } = this.layoutFor(this.roundIndex);
     const map = generateMap(this.seed, this.rules, this.mapOptions);
-    const spawns: readonly [Vec2, Vec2] = swap
-      ? [map.spawns[1], map.spawns[0]]
-      : [map.spawns[0], map.spawns[1]];
+    const spawns = spawnsForRound(map.spawns, this.layoutFor(this.roundIndex));
 
     this.round = new Round({
       rules: this.rules,

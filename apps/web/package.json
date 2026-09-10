@@ -1,0 +1,35 @@
+{
+  "name": "@spark/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Spark match viewer and spell workbench. Runs the engine in the browser.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:parity": "node test/browser-parity.mjs",
+    "test": "node test/browser-parity.mjs && node test/viewer-smoke.mjs && node test/live-relay.mjs",
+    "test:viewer": "node test/viewer-smoke.mjs",
+    "test:live": "node test/live-relay.mjs"
+  },
+  "dependencies": {
+    "@spark/protocol": "*",
+    "@spark/engine": "*",
+    "@spark/replay": "*",
+    "pixi.js": "^8.20.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.3",
+    "zustand": "^5.0.15",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.2.2",
+    "playwright": "^1.63.0"
+  }
+}

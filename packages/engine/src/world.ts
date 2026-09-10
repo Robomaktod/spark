@@ -235,6 +235,83 @@ export class World {
     return this.cellView(i % this.width, Math.floor(i / this.width));
   }
 
+  /**
+   * Every non-ambient cell as a flat run of [index, material, mass, temperature,
+   * binding, height]. Flat rather than objects because a keyframe holds
+   * thousands of these and the replay file has to stay small.
+   */
+  snapshotSparse(): number[] {
+    const out: number[] = [];
+    for (let i = 0; i < this.material.length; i++) {
+      if (this.isAmbientAir(i)) continue;
+      out.push(i, this.material[i]!, this.mass[i]!, this.temperature[i]!, this.binding[i]!, this.heightMm[i]!);
+    }
+    return out;
+  }
+
+  /** Applies a flat sparse run, optionally resetting everything else to ambient air first. */
+  applySparse(flat: readonly number[], clearFirst: boolean): void {
+    if (clearFirst) {
+      this.material.fill(MATERIAL_INDEX.air);
+      this.mass.fill(MATERIALS.air.densityGPerCell);
+      this.temperature.fill(this.ambientMilliC);
+      this.binding.fill(0);
+      this.heightMm.fill(0);
+    }
+    for (let k = 0; k + 5 < flat.length; k += 6) {
+      const i = flat[k]!;
+      this.material[i] = flat[k + 1]!;
+      this.mass[i] = flat[k + 2]!;
+      this.temperature[i] = flat[k + 3]!;
+      this.binding[i] = flat[k + 4]!;
+      this.heightMm[i] = flat[k + 5]!;
+    }
+  }
+
+  /**
+   * Cells whose contents differ from a baseline snapshot, in the same flat
+   * form. A keyframe records this rather than the whole world: the round's
+   * generated terrain is reproducible from the seed, so only what the match
+   * changed needs storing, which is usually tens of cells rather than thousands.
+   */
+  diffFromSparse(baseline: readonly number[]): number[] {
+    const before = new Map<number, [number, number, number, number, number]>();
+    for (let k = 0; k + 5 < baseline.length; k += 6) {
+      before.set(baseline[k]!, [baseline[k + 1]!, baseline[k + 2]!, baseline[k + 3]!, baseline[k + 4]!, baseline[k + 5]!]);
+    }
+    const out: number[] = [];
+    const emit = (i: number): void => {
+      out.push(i, this.material[i]!, this.mass[i]!, this.temperature[i]!, this.binding[i]!, this.heightMm[i]!);
+    };
+    const seen = new Set<number>();
+    for (let i = 0; i < this.material.length; i++) {
+      const was = before.get(i);
+      if (!was) {
+        if (!this.isAmbientAir(i)) {
+          emit(i);
+          seen.add(i);
+        }
+        continue;
+      }
+      seen.add(i);
+      if (
+        was[0] !== this.material[i] ||
+        was[1] !== this.mass[i] ||
+        was[2] !== this.temperature[i] ||
+        was[3] !== this.binding[i] ||
+        was[4] !== this.heightMm[i]
+      ) {
+        emit(i);
+      }
+    }
+    // A baseline cell the match reverted to ambient air still has to be stated,
+    // or restoring would leave the old terrain standing.
+    for (const i of before.keys()) {
+      if (!seen.has(i) && this.isAmbientAir(i)) emit(i);
+    }
+    return out;
+  }
+
   hashInto(h: Hasher): void {
     h.str('world').int(this.width).int(this.height);
     for (let i = 0; i < this.material.length; i++) {

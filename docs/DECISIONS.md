@@ -188,3 +188,110 @@ beyond `PATH` and `HOME`), and `--max-old-space-size` for Node bots.
 need OS-level support — a container, a seccomp profile or a jail — and are not
 something a Node parent process can impose on an arbitrary child. Until they
 exist, **do not run untrusted bots.** This is called out in the README as well.
+
+---
+
+# Web layer
+
+The web plan (`docs/web-plan.md`) requires three additions to the passport's
+v0.1 spec, all additive and none of which change simulation behaviour. These are
+what they turned into, plus the decisions the plan itself left open.
+
+## D11 — Swept-path times are milli-turns, and positions are milli-cells
+
+**Web plan:** §6 and §10.1 ask the physics step to record path segments with
+collision times as fractions of the turn, and shows them as decimals
+(`"t0": 0.0, "t1": 0.62`) over cell coordinates.
+
+**Chosen:** `t0`/`t1` are milli-turns (0–1000) and `from`/`to` are milli-cells.
+
+**Why:** passport §13 is unconditional — no float anywhere in the simulation, and
+none crossing the bot boundary. The replay is the same artefact the determinism
+guarantee rests on, so a decimal in it would be the one place a float could
+sneak back in. Milli-cells also give the viewer sub-cell interpolation, which
+whole-cell positions would not.
+
+## D12 — Keyframes store a diff, not a world
+
+**Web plan:** §10.3 asks for full world-state snapshots every 5 turns.
+
+**Chosen:** a keyframe stores the cells that differ from the round's *generated*
+terrain, which is reproducible from the seed. Restoring rebuilds the generated
+world and applies the diff.
+
+**Why:** a generated map has a few thousand non-ambient cells. Storing all of
+them 16 times over a four-round match would add several megabytes to a file the
+plan wants small. The diff is usually tens of cells: keyframes come to about
+60 kB of a 260 kB replay. `spark verify` checks that seeking through them lands
+on exactly the state a straight playthrough reaches.
+
+## D13 — The replay player owns the round sequence, not a Match
+
+**Chosen:** `ReplayPlayer` builds each `Round` itself rather than driving a
+`Match`. Round layout comes from the engine's own exported `roundLayout` and
+`spawnsForRound`, which `Match` also uses.
+
+**Why:** restoring a keyframe means jumping straight to round 3 turn 20 without
+playing rounds 1 and 2. Driving a Match would mean simulating everything before
+it. Sharing the layout functions is what stops the player and the match runner
+from disagreeing about who moves first or which spawn is whose — the failure
+that would look exactly like a nondeterministic engine.
+
+## D14 — Impact events carry the shape they landed
+
+**Chosen:** the `impact_wizard` event records the impact shape's cells, the
+struck wizard's footprint, and the kinetic energy carried in.
+
+**Why:** the coverage overlay is the highest-value one in the plan (§5.2),
+because `overlapCells / impactShapeCells` *is* the damage multiplier, and a
+player who cannot see it cannot tell a graze from a miss. Recomputing the shape
+in the viewer would mean a second implementation of the rasteriser — the exact
+kind of duplication that guarantees the two disagree eventually.
+
+## D15 — Pixel layers, not a tilemap
+
+**Web plan:** §5.1 suggests a PixiJS tilemap for 40,000 cells.
+
+**Chosen:** terrain and the pixel overlays are drawn into 200×200 offscreen
+canvases and uploaded as nearest-neighbour textures — one cell is one pixel.
+Objects, trails, coverage and the wizards are vector layers on top.
+
+**Why:** at one pixel per cell a full repaint is a single small texture upload
+rather than forty thousand sprite updates, and an overlay becomes just another
+buffer of the same shape. The plan's dirty-block optimisation still applies and
+is used: `Round.lastDirtyBlocks` hands the renderer the engine's own dirty set,
+and only a forward step uses it — a new round or a seek repaints everything,
+because the dirty set describes an increment and neither of those is one.
+
+## D16 — The mana field is contour rings, measured with the passport's own knife
+
+**Web plan:** §5.2 lists a "mana field" overlay showing cost-to-reach at each
+position.
+
+**Chosen:** contour rings every 5 mana, for a 7.2 kg ice knife thrown from A's
+wand, with the out-of-reach region tinted.
+
+**Why:** a colour wash over the whole grid drowns the terrain and every other
+overlay — the "overlay overload" risk the plan names — and it does not answer
+the question a player has, which is "where does the next twenty mana get me?".
+Rings answer that directly. The probe is the passport's own worked example so
+the numbers mean something; a lighter probe is so cheap to throw that the entire
+map falls inside one band and the overlay says nothing at all.
+
+## D17 — A late live link falls back to the recording
+
+**Chosen:** when the relay closes a live socket, the viewer loads the recorded
+replay under the same id and says so.
+
+**Why:** a four-round match between the shipped bots runs in about five seconds
+— less than a cold browser takes to start. Without the fallback, a link opened a
+moment too late sits forever on "waiting for the first turn". The relay already
+stores the finished replay under the live id, so the fallback is free.
+
+## D18 — Measured: browser catch-up is about 1.5 s for a whole match
+
+The plan's §12 risk table says to measure the live catch-up rather than assume
+it is instant. Chromium re-simulates a complete four-round, 170-turn match in
+about 1.5 s — roughly 9 ms per turn, so a viewer joining at the last turn of a
+single round waits around 300 ms. Well inside the plan's one-second target for a
+round, and worth knowing before anyone tries this with a longer match format.

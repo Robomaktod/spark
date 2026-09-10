@@ -1,0 +1,28 @@
+{
+  "name": "@spark/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Thin relay: stores published replays, fans out live turn packets, serves the web app. Never runs bot code.",
+  "main": "./dist/src/main.js",
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/src/main.js"
+  },
+  "dependencies": {
+    "@spark/protocol": "*",
+    "@spark/engine": "*",
+    "@spark/replay": "*",
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/platform-express": "^12.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "ws": "^8.21.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "@types/express": "^5.0.6"
+  }
+}

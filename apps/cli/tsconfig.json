@@ -13,6 +13,9 @@
     },
     {
       "path": "../../packages/engine"
+    },
+    {
+      "path": "../../packages/replay"
     }
   ]
 }

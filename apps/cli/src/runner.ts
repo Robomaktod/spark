@@ -4,12 +4,25 @@
  * Everything simulation-shaped lives in @spark/engine; this file is the I/O
  * shell around it.
  */
-import { DEFAULT_RULES, validateActions, type ActionsMessage, type Rules, type Side, type SpellTemplate } from '@spark/protocol';
-import { Match, Spellbook, checkSpellbook, type MatchResult } from '@spark/engine';
-import { describeEvent } from '@spark/engine';
+import { randomUUID } from 'node:crypto';
+import {
+  DEFAULT_RULES,
+  validateActions,
+  type ActionsMessage,
+  type Rules,
+  type Side,
+  type SpellTemplate,
+} from '@spark/protocol';
+import { Match, Spellbook, checkSpellbook, describeEvent, type MatchResult } from '@spark/engine';
+import {
+  REPLAY_VERSION,
+  shouldKeyframe,
+  type ReplayFile,
+  type ReplayKeyframe,
+  type ReplayRoundInfo,
+  type ReplayTurn,
+} from '@spark/replay';
 import { BotProcess, type BotSpec } from './botProcess.js';
-import type { ReplayFile, ReplayTurn } from './replay.js';
-import { REPLAY_VERSION } from './replay.js';
 
 const SIDES: readonly Side[] = ['A', 'B'];
 
@@ -18,6 +31,18 @@ export interface RunOptions {
   readonly rules?: Rules;
   readonly bots: Readonly<Record<Side, BotSpec>>;
   readonly onEvent?: (line: string) => void;
+  /**
+   * Called once the handshake is done, before the first turn. A live viewer
+   * needs the locked spellbooks to reconstruct the match, and they only exist
+   * after both bots have registered.
+   */
+  readonly onStart?: (info: {
+    readonly rules: Rules;
+    readonly spellbooks: Readonly<Record<Side, readonly SpellTemplate[]>>;
+    readonly pagesUsed: Readonly<Record<Side, number>>;
+  }) => void;
+  /** Called with each turn as it completes, for live streaming (web plan §3). */
+  readonly onTurn?: (turn: ReplayTurn, roundInfo: ReplayRoundInfo) => void;
 }
 
 export interface RunOutcome {
@@ -70,27 +95,41 @@ export async function runMatch(options: RunOptions): Promise<RunOutcome> {
       books[side] = new Spellbook(spells, rules);
       pagesUsed[side] = check.pagesUsed;
       procs[side].rememberInit();
-      emit(`${side} (${options.bots[side].name}) registered ${spells.length} spells, ${check.pagesUsed}/${rules.spellbook.maxPages} pages`);
+      emit(
+        `${side} (${options.bots[side].name}) registered ${spells.length} spells, ` +
+          `${check.pagesUsed}/${rules.spellbook.maxPages} pages`,
+      );
     }
+
+    options.onStart?.({
+      rules,
+      spellbooks: { A: templates.A, B: templates.B },
+      pagesUsed: { ...pagesUsed },
+    });
 
     /* ---- the match ---- */
     const match = new Match({ rules, seed: options.seed, spellbooks: books });
     const turns: ReplayTurn[] = [];
-    const eventLines: string[] = [];
-    let eventCursor = 0;
+    const keyframes: ReplayKeyframe[] = [];
+    const roundInfos: ReplayRoundInfo[] = [];
 
     const deliverOutbox = (): void => {
       for (const item of match.drainOutbox()) {
-        procs[item.side].send(item.message, item.message.type === 'match_start' || item.message.type === 'round_start');
+        const remember = item.message.type === 'match_start' || item.message.type === 'round_start';
+        procs[item.side].send(item.message, remember);
       }
     };
 
     deliverOutbox();
 
+    let turnsThisRound = 0;
+
     while (!match.finished) {
       const pending = match.pending;
       if (!pending) break;
       const side = pending.side;
+      const round = match.currentRound;
+      if (!round) break;
 
       const started = Date.now();
       const reply = await procs[side].ask<ActionsMessage>(pending.message, rules.limits.turnMs);
@@ -106,33 +145,62 @@ export async function runMatch(options: RunOptions): Promise<RunOutcome> {
         await procs[side].restart();
       }
 
-      turns.push({
-        round: pending.message.round,
+      const roundNumber = round.round;
+      const game = round.game;
+      const firstMover = roundNumber % 2 === 1 ? 'A' : 'B';
+      if (!roundInfos.some((r) => r.round === roundNumber)) {
+        turnsThisRound = 0;
+        roundInfos.push({
+          round: roundNumber,
+          game,
+          firstMover,
+          firstTurnIndex: turns.length,
+          turnCount: 0,
+          winner: null,
+          reason: '',
+        });
+      }
+
+      match.submit(actions);
+      turnsThisRound++;
+
+      const record: ReplayTurn = {
+        round: roundNumber,
         turn: pending.message.turn,
         side,
         actions,
         elapsedMs: elapsed,
         stderr: procs[side].drainStderr(),
-      });
+        events: [...round.lastEvents],
+        paths: [...round.lastPaths],
+        hash: round.stateHash(),
+      };
+      turns.push(record);
 
-      match.submit(actions);
+      for (const e of record.events) emit(describeEvent(e));
 
-      const round = match.currentRound;
-      if (round) {
-        for (; eventCursor < round.events.length; eventCursor++) {
-          const line = describeEvent(round.events[eventCursor]!);
-          eventLines.push(line);
-          emit(line);
-        }
-      } else {
-        eventCursor = 0;
+      // Keyframes are written on the round that produced them, so a restore
+      // never has to know what happened in any earlier round.
+      if (!round.finished && shouldKeyframe(turnsThisRound)) {
+        keyframes.push({ afterTurnIndex: turns.length - 1, round: roundNumber, snapshot: round.snapshot() });
       }
+
+      const info = roundInfos[roundInfos.length - 1]!;
+      roundInfos[roundInfos.length - 1] = {
+        ...info,
+        turnCount: turnsThisRound,
+        winner: round.finished ? round.winner : info.winner,
+        reason: round.finished ? round.reason : info.reason,
+      };
+
+      options.onTurn?.(record, roundInfos[roundInfos.length - 1]!);
       deliverOutbox();
     }
 
     const result = match.result;
     const replay: ReplayFile = {
       version: REPLAY_VERSION,
+      id: randomUUID(),
       seed: options.seed,
       rules,
       bots: {
@@ -140,8 +208,9 @@ export async function runMatch(options: RunOptions): Promise<RunOutcome> {
         B: { name: options.bots.B.name, command: options.bots.B.command, pagesUsed: pagesUsed.B },
       },
       spellbooks: { A: templates.A, B: templates.B },
+      rounds: roundInfos,
       turns,
-      events: eventLines,
+      keyframes,
       result,
       finishedAt: new Date().toISOString(),
     };

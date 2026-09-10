@@ -1,0 +1,12 @@
+{
+  "name": "@spark/replay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Replay file format, keyframe indexing and event log types. Shared by cli, viewer-ascii and web.",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": { ".": "./dist/src/index.js" },
+  "dependencies": { "@spark/protocol": "*", "@spark/engine": "*" },
+  "scripts": { "build": "tsc -b" }
+}

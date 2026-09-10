@@ -3,3 +3,4 @@ dist/
 *.tsbuildinfo
 replays/
 .DS_Store
+apps/web/dist/

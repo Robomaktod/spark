@@ -11,6 +11,8 @@ export * from './wizard.js';
 export * from './movement.js';
 export * from './events.js';
 export * from './physics.js';
+export * from './paths.js';
+export * from './snapshot.js';
 export * from './round.js';
 export * from './mapgen.js';
 export * from './match.js';

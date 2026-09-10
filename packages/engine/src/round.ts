@@ -27,7 +27,7 @@ import type { EngineEvent, Vec } from './events.js';
 import { describeEvent, isPublicEvent } from './events.js';
 import { World } from './world.js';
 import { Wizard } from './wizard.js';
-import { SparkObject } from './objects.js';
+import { SparkObject, type ResolvedOp } from './objects.js';
 import { manifestBlocked, planCast } from './cast.js';
 import { applyMove } from './movement.js';
 import {
@@ -39,6 +39,7 @@ import {
   settleObjects,
   type PhysicsContext,
 } from './physics.js';
+import { PathRecorder, type ObjectPath } from './paths.js';
 import {
   burnDamageMilliHp,
   concentrationUpkeepMilliMana,
@@ -50,6 +51,7 @@ import {
 import { idivRound, ilen } from './fp.js';
 import { facingFromVector, unitVectorMilli } from './shapes.js';
 import { Hasher } from './hash.js';
+import type { ObjectSnapshot, RoundSnapshot, SideSnapshot } from './snapshot.js';
 
 export type RoundReason = 'hp' | 'turn_cap' | 'double_ko';
 
@@ -104,8 +106,18 @@ export class Round {
   winner: Side | null = null;
   reason: RoundReason = 'turn_cap';
 
+  /** Swept paths from the most recent turn, for smooth playback (web plan §6). */
+  lastPaths: ObjectPath[] = [];
+  /** Blocks the most recent turn touched, for partial redraws (web plan §5.1). */
+  lastDirtyBlocks: number[] = [];
+
   private readonly state: Record<Side, SideState>;
   private readonly books: Readonly<Record<Side, Spellbook>>;
+  /**
+   * The terrain this round started with. Keyframes diff against it, so a
+   * snapshot carries only what the match changed.
+   */
+  private readonly initialTerrain: number[];
 
   constructor(config: RoundConfig) {
     this.rules = config.rules;
@@ -137,6 +149,166 @@ export class Round {
 
     this.events.push({ t: 'round_start', round: this.round, game: this.game, firstMover: config.firstMover });
     this.world.drainChanged();
+    this.initialTerrain = this.world.snapshotSparse();
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Keyframes (web plan §4)                                           */
+  /* ---------------------------------------------------------------- */
+
+  /** Everything needed to resume this round from exactly here. */
+  snapshot(): RoundSnapshot {
+    const sideSnapshot = (side: Side): SideSnapshot => {
+      const st = this.state[side];
+      return {
+        lastCastResult: st.lastCastResult,
+        concentrations: [...st.concentrations],
+        concentrationPriority: [...st.concentrationPriority],
+        opponentCastSinceDeclare: st.opponentCastSinceDeclare,
+        pendingCells: [...st.pendingCells].sort((a, b) => a - b),
+        eventCursor: st.eventCursor,
+        reaction: st.reaction
+          ? {
+              declaration: st.reaction.declaration,
+              reservedMilli: st.reaction.reservedMilli,
+              declaredOnTurn: st.reaction.declaredOnTurn,
+              fired: st.reaction.fired,
+            }
+          : null,
+      };
+    };
+    const wizardSnapshot = (side: Side): RoundSnapshot['wizards'][Side] => {
+      const w = this.wizards[side];
+      return {
+        x: w.x,
+        y: w.y,
+        facing: w.facing,
+        hpMilli: w.hpMilli,
+        manaMilli: w.manaMilli,
+        mp: w.mp,
+        reservedMilli: w.reservedMilli,
+        manaSpentMilli: w.manaSpentMilli,
+      };
+    };
+    return {
+      round: this.round,
+      game: this.game,
+      turn: this.turn,
+      slot: this.slot,
+      nextObjectId: this.nextObjectId,
+      finished: this.finished,
+      winner: this.winner,
+      reason: this.reason,
+      cells: this.world.diffFromSparse(this.initialTerrain),
+      wizards: { A: wizardSnapshot('A'), B: wizardSnapshot('B') },
+      objects: this.objects.map(
+        (o): ObjectSnapshot => ({
+          id: o.id,
+          owner: o.owner,
+          spellId: o.spellId,
+          xMilli: o.xMilli,
+          yMilli: o.yMilli,
+          vxMilli: o.vxMilli,
+          vyMilli: o.vyMilli,
+          massG: o.massG,
+          material: o.material,
+          temperatureMilliC: o.temperatureMilliC,
+          concentrated: o.concentrated,
+          settled: o.settled,
+          cells: o.cells.map(([x, y]) => [x, y] as const),
+          impact: o.impact
+            ? {
+                cells: o.impact.cells.map(([x, y]) => [x, y] as const),
+                canonicalCellCount: o.impact.canonicalCellCount,
+                ops: o.impact.ops.map((op) => ({ op: op.op, value: op.value })),
+              }
+            : null,
+        }),
+      ),
+      sides: { A: sideSnapshot('A'), B: sideSnapshot('B') },
+      eventCount: this.events.length,
+    };
+  }
+
+  /**
+   * Rewinds this round to a snapshot. The world is rebuilt from the round's
+   * own generated terrain and then the snapshot's diff is applied, so a
+   * restore does not depend on what the world happened to contain first.
+   */
+  restore(snap: RoundSnapshot): void {
+    this.world.applySparse(this.initialTerrain, true);
+    this.world.applySparse(snap.cells, false);
+    this.world.clearDirtyBlocks();
+    this.world.drainChanged();
+
+    this.turn = snap.turn;
+    this.slot = snap.slot;
+    this.nextObjectId = snap.nextObjectId;
+    this.finished = snap.finished;
+    this.winner = snap.winner;
+    this.reason = snap.reason as RoundReason;
+
+    for (const side of SIDES) {
+      const w = this.wizards[side];
+      const ws = snap.wizards[side];
+      w.x = ws.x;
+      w.y = ws.y;
+      w.facing = ws.facing;
+      w.hpMilli = ws.hpMilli;
+      w.manaMilli = ws.manaMilli;
+      w.mp = ws.mp;
+      w.reservedMilli = ws.reservedMilli;
+      w.manaSpentMilli = ws.manaSpentMilli;
+
+      const st = this.state[side];
+      const ss = snap.sides[side];
+      st.lastCastResult = ss.lastCastResult as SideState['lastCastResult'];
+      st.concentrations = [...ss.concentrations];
+      st.concentrationPriority = [...ss.concentrationPriority];
+      st.opponentCastSinceDeclare = ss.opponentCastSinceDeclare;
+      st.pendingCells = new Set(ss.pendingCells);
+      st.eventCursor = ss.eventCursor;
+      st.reaction = ss.reaction
+        ? {
+            declaration: ss.reaction.declaration as ArmedReaction['declaration'],
+            reservedMilli: ss.reaction.reservedMilli,
+            declaredOnTurn: ss.reaction.declaredOnTurn,
+            fired: ss.reaction.fired,
+          }
+        : null;
+    }
+
+    this.objects.length = 0;
+    for (const o of snap.objects) {
+      const obj = new SparkObject(
+        o.id,
+        o.owner,
+        o.spellId,
+        o.xMilli,
+        o.yMilli,
+        o.vxMilli,
+        o.vyMilli,
+        o.massG,
+        o.material,
+        o.temperatureMilliC,
+        o.cells.map(([x, y]) => [x, y] as const),
+        o.impact
+          ? {
+              cells: o.impact.cells.map(([x, y]) => [x, y] as const),
+              canonicalCellCount: o.impact.canonicalCellCount,
+              ops: o.impact.ops.map((op) => ({ op: op.op as ResolvedOp['op'], value: op.value })),
+            }
+          : null,
+      );
+      obj.concentrated = o.concentrated;
+      obj.settled = o.settled;
+      this.objects.push(obj);
+    }
+
+    this.events.length = snap.eventCount;
+    this.lastPaths = [];
+    this.lastDirtyBlocks = [];
+    this.lastEvents = [];
   }
 
   /** The side whose turn it is. */
@@ -144,13 +316,14 @@ export class Round {
     return this.order[this.slot]!;
   }
 
-  private ctx(): PhysicsContext {
+  private ctx(paths: PathRecorder): PhysicsContext {
     return {
       world: this.world,
       rules: this.rules,
       objects: this.objects,
       wizards: this.wizards,
       events: this.events,
+      paths,
       onObjectLost: (obj, reason) => this.releaseConcentration(obj.owner, obj.id, reason),
     };
   }
@@ -214,6 +387,9 @@ export class Round {
   /** Applies one wizard's turn. Pass null when the bot timed out or crashed. */
   submit(actions: ActionsMessage | null): void {
     if (this.finished) throw new Error('Round.submit: the round is already over');
+    this.lastPaths = [];
+    this.lastDirtyBlocks = [];
+    const eventsBefore = this.events.length;
     const side = this.current;
     const st = this.state[side];
     const wizard = this.wizards[side];
@@ -247,7 +423,11 @@ export class Round {
     this.syncDeltas();
     this.checkEnd();
     if (!this.finished) this.advanceSlot();
+    this.lastEvents = this.events.slice(eventsBefore);
   }
+
+  /** Events produced by the most recent turn. Stored per turn in the replay. */
+  lastEvents: EngineEvent[] = [];
 
   private applyActions(side: Side, actions: ActionsMessage): void {
     const st = this.state[side];
@@ -344,6 +524,12 @@ export class Round {
       side,
       spellId,
       costMilli: plan.cost.total,
+      breakdown: {
+        manifest: plan.cost.manifest,
+        impulse: plan.cost.impulse,
+        heat: plan.cost.heat,
+        bind: plan.cost.bind,
+      },
       at: plan.manifest as Vec,
       dir: [plan.dirX, plan.dirY] as Vec,
       speed: Math.trunc(plan.speedMilli / 1000),
@@ -591,7 +777,8 @@ export class Round {
   /* ---------------------------------------------------------------- */
 
   private runPhysics(): void {
-    const ctx = this.ctx();
+    const recorder = new PathRecorder();
+    const ctx = this.ctx(recorder);
     advanceObjects(ctx);
     applyDrag(ctx);
     settleObjects(ctx);
@@ -610,7 +797,16 @@ export class Round {
       }
     }
 
+    // The renderer reuses the engine's own dirty set for partial redraws
+    // (web plan §5.1), so hand it over before the set is cleared.
+    this.lastDirtyBlocks = [...this.world.dirtyBlockList];
     this.world.clearDirtyBlocks();
+
+    this.lastPaths = recorder.finish((id) => {
+      const obj = this.objectById(id);
+      return obj && !obj.destroyed ? [obj.xMilli, obj.yMilli] : null;
+    });
+
     for (let i = this.objects.length - 1; i >= 0; i--) {
       if (this.objects[i]!.destroyed) this.objects.splice(i, 1);
     }

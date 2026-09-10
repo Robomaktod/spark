@@ -11,7 +11,7 @@
   "dependencies": {
     "@spark/protocol": "*",
     "@spark/engine": "*",
-    "@spark/cli": "*"
+    "@spark/replay": "*"
   },
   "scripts": {
     "build": "tsc -b"

@@ -14,10 +14,48 @@ export type EngineEvent =
   | { readonly t: 'round_start'; readonly round: number; readonly game: number; readonly firstMover: Side }
   | { readonly t: 'turn_start'; readonly side: Side; readonly turn: number }
   | { readonly t: 'move'; readonly side: Side; readonly from: Vec; readonly to: Vec; readonly facing: number; readonly mp: number; readonly note?: string }
-  | { readonly t: 'cast'; readonly side: Side; readonly spellId: string; readonly costMilli: number; readonly at: Vec; readonly dir: Vec; readonly speed: number; readonly massG: number; readonly concentrate: boolean }
+  | {
+      readonly t: 'cast';
+      readonly side: Side;
+      readonly spellId: string;
+      readonly costMilli: number;
+      /**
+       * The cost split by term, so the ledger can show a player the same four
+       * numbers passport §9 tells them to compute (web plan §5.3).
+       */
+      readonly breakdown: {
+        readonly manifest: number;
+        readonly impulse: number;
+        readonly heat: number;
+        readonly bind: number;
+      };
+      readonly at: Vec;
+      readonly dir: Vec;
+      readonly speed: number;
+      readonly massG: number;
+      readonly concentrate: boolean;
+    }
   | { readonly t: 'cast_failed'; readonly side: Side; readonly spellId: string; readonly reason: string }
   | { readonly t: 'channel'; readonly side: Side; readonly objectId: number; readonly kind: string; readonly costMilli: number }
-  | { readonly t: 'impact_wizard'; readonly objectId: number; readonly target: Side; readonly damageMilli: number; readonly overlap: number; readonly impactCells: number; readonly at: Vec }
+  | {
+      readonly t: 'impact_wizard';
+      readonly objectId: number;
+      readonly target: Side;
+      readonly damageMilli: number;
+      readonly overlap: number;
+      readonly impactCells: number;
+      /** Kinetic energy the object carried into the hit, milli-joules. */
+      readonly keMilliJ: number;
+      readonly at: Vec;
+      /**
+       * The impact shape's cell offsets relative to `at`. The damage formula
+       * scales by overlap / impactCells, and without seeing which cells landed
+       * on the wizard a player cannot tell a graze from a miss (web plan §5.2).
+       */
+      readonly shape: readonly Vec[];
+      /** The struck wizard's footprint at the moment of impact. */
+      readonly footprint: readonly Vec[];
+    }
   | { readonly t: 'impact_cell'; readonly objectId: number; readonly at: Vec; readonly penetrated: boolean; readonly keMilliJ: number }
   | { readonly t: 'objects_collided'; readonly a: number; readonly b: number; readonly at: Vec; readonly keMilliJ: number }
   | { readonly t: 'settled'; readonly objectId: number; readonly at: Vec }
