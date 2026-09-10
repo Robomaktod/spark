@@ -78,7 +78,6 @@ export function terrainRGB(material: MaterialId, massG: number): RGB {
   return mix(MATERIAL_RGB.air, base, fill);
 }
 
-export const cssRGB = (c: RGB, alpha = 1): string =>
-  `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
+export const cssRGB = (c: RGB, alpha = 1): string => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
 
 export const hexRGB = (c: RGB): number => (c[0] << 16) | (c[1] << 8) | c[2];

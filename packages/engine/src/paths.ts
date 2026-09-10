@@ -16,12 +16,7 @@ import type { MaterialId } from '@spark/protocol';
 
 /** Why a straight run ended. Absent means it was still going at the turn's end. */
 export type SegmentEnd =
-  | 'penetrated'
-  | 'stopped'
-  | 'wizard'
-  | 'collision'
-  | 'boundary'
-  | 'channelled';
+  'penetrated' | 'stopped' | 'wizard' | 'collision' | 'boundary' | 'channelled';
 
 export interface PathSegment {
   /** Start position in milli-cells. */
@@ -107,7 +102,10 @@ export class PathRecorder {
 }
 
 /** Position of an object at a fraction of a turn, in milli-cells. Linear within a run. */
-export function positionAt(path: ObjectPath, tMilliTurns: number): readonly [number, number] | null {
+export function positionAt(
+  path: ObjectPath,
+  tMilliTurns: number,
+): readonly [number, number] | null {
   const segments = path.segments;
   if (segments.length === 0) return null;
   const first = segments[0]!;

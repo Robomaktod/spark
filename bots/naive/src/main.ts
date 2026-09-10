@@ -45,7 +45,13 @@ runBot({
 
     // The chill parameter is energy priced against a nominal cell, so the SDK
     // converts "I want this knife at -200 C" into the number to declare.
-    const chill = declaredTemperatureFor(-200, 7200, 'ice', shapeCellCount({ shape: 'disc', radius: 2 }), ctx.rules);
+    const chill = declaredTemperatureFor(
+      -200,
+      7200,
+      'ice',
+      shapeCellCount({ shape: 'disc', radius: 2 }),
+      ctx.rules,
+    );
     const args = { m: 7200, v: 40, chill, dir };
     const cost = ctx.cost('knife', args);
     if (!cost || cost.total > msg.you.manaMilli) {

@@ -26,11 +26,23 @@
     "match": "npm run build:packages && node apps/cli/dist/src/main.js run",
     "demo": "npm run build:packages && node apps/cli/dist/src/main.js run --seed 7 --replay replays/demo.json && node apps/viewer-ascii/dist/src/main.js replays/demo.json",
     "serve": "npm run build && node apps/server/dist/src/main.js",
-    "dev:web": "npm run dev --workspace @spark/web"
+    "dev:web": "npm run dev --workspace @spark/web",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "invariants": "node scripts/check-invariants.mjs",
+    "verify": "npm run invariants && npm run typecheck && npm run lint && npm run format:check && npm test && npm run verify:replay",
+    "verify:replay": "node scripts/verify-replay.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.70.0"
   },
   "engines": {
     "node": ">=22"

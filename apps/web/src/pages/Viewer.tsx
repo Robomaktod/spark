@@ -68,9 +68,22 @@ export function Viewer(): React.JSX.Element {
           if (!alive) return;
           load(r, false);
           setStatus('');
-          if (note) setNotice(note);
+          const partial = r.partial
+            ? 'this match was cut short; the turns it did play are below'
+            : null;
+          if (partial ?? note) setNotice(partial ?? note ?? null);
         })
-        .catch((e: Error) => alive && setStatus(`could not load the replay: ${e.message}`));
+        .catch((e: Error) => {
+          if (!alive) return;
+          // A 404 here is the ordinary case, not a crash: the id names a match
+          // the relay has never stored. Say what that means instead of showing
+          // the status line.
+          setStatus(
+            /\b404\b/.test(e.message)
+              ? 'No match here. Either it was never published, or the relay was restarted — replays live on disk under SPARK_REPLAY_DIR.'
+              : `Could not load the replay: ${e.message}`,
+          );
+        });
     };
 
     if (isLive) {
@@ -93,7 +106,9 @@ export function Viewer(): React.JSX.Element {
           // A finished match is stored under the same id, so a link opened a
           // moment too late lands on the recording rather than on nothing.
           loadRecorded(
-            sawAnything ? 'the match finished; showing the recording' : 'that match has already finished',
+            sawAnything
+              ? 'the match finished; showing the recording'
+              : 'that match has already finished',
           );
         },
       );
@@ -114,6 +129,7 @@ export function Viewer(): React.JSX.Element {
       <div className="page">
         <div className="page-narrow">
           <div className="empty">{status || 'waiting for the first turn…'}</div>
+          <a href="/">back to the match list</a>
         </div>
       </div>
     );

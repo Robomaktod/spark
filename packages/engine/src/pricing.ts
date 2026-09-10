@@ -29,7 +29,7 @@ export function keMilliJ(massG: number, speedMilliCellsPerTurn: number): number 
 /** Speed in milli-cells/turn that gives a mass this much kinetic energy. */
 export function speedForKeMilliJ(massG: number, keMilliJoules: number): number {
   if (massG <= 0 || keMilliJoules <= 0) return 0;
-  const n = BigInt(Math.trunc(keMilliJoules)) * 200_000_000n / BigInt(Math.trunc(massG));
+  const n = (BigInt(Math.trunc(keMilliJoules)) * 200_000_000n) / BigInt(Math.trunc(massG));
   // Integer square root on BigInt keeps this exact.
   if (n <= 0n) return 0;
   let r = n;
@@ -88,7 +88,11 @@ export function bindCostMilliMana(massG: number, deltaBinding: number, rules: Ru
  * what lets heat be conserved: a spell buys a packet of energy, the body
  * carries it, and the impact delivers it into whatever it struck.
  */
-export function thermalEnergyMilliJ(massG: number, specificHeatMilli: number, deltaMilliC: number): number {
+export function thermalEnergyMilliJ(
+  massG: number,
+  specificHeatMilli: number,
+  deltaMilliC: number,
+): number {
   const n =
     BigInt(Math.trunc(massG)) *
     BigInt(Math.trunc(specificHeatMilli)) *

@@ -8,7 +8,7 @@ import type { ImpactOp, MaterialId, ObjectView, Side, Vec2 } from '@spark/protoc
 import type { Cell } from './shapes.js';
 import { MILLI_CELLS_PER_CELL } from '@spark/protocol';
 import { ilen } from './fp.js';
-import { Hasher } from './hash.js';
+import type { Hasher } from './hash.js';
 
 export interface ResolvedOp {
   readonly op: ImpactOp['op'];
@@ -78,7 +78,10 @@ export class SparkObject {
     return {
       id: this.id,
       p: [this.cellX, this.cellY],
-      v: [Math.trunc(this.vxMilli / MILLI_CELLS_PER_CELL), Math.trunc(this.vyMilli / MILLI_CELLS_PER_CELL)],
+      v: [
+        Math.trunc(this.vxMilli / MILLI_CELLS_PER_CELL),
+        Math.trunc(this.vyMilli / MILLI_CELLS_PER_CELL),
+      ],
       vMilli: [this.vxMilli, this.vyMilli],
       m: this.massG,
       mat: this.material,

@@ -120,13 +120,14 @@ export function ArenaView({ rules }: { rules: Rules }): React.JSX.Element {
     >
       {frame && (
         <div className="hud">
-          round {frame.roundNumber} · turn {frame.turn} · {frame.side} acted · hash {frame.hash.slice(0, 8)}
+          round {frame.roundNumber} · turn {frame.turn} · {frame.side} acted · hash{' '}
+          {frame.hash.slice(0, 8)}
         </div>
       )}
       {probe && (
         <div className="cellprobe">
-          [{probe.x},{probe.y}] {probe.mat} · {probe.m} g · {(probe.t / 1000).toFixed(1)} C · binding{' '}
-          {probe.b} · {probe.h} mm
+          [{probe.x},{probe.y}] {probe.mat} · {probe.m} g · {(probe.t / 1000).toFixed(1)} C ·
+          binding {probe.b} · {probe.h} mm
         </div>
       )}
     </div>

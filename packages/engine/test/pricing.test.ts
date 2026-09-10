@@ -89,7 +89,10 @@ describe('mana model — passport §9 worked examples', () => {
         },
         R,
       ).total;
-    assert.ok(make(6) > make(2), 'passport §7.4: a large impact disc heats more cells, so it costs more');
+    assert.ok(
+      make(6) > make(2),
+      'passport §7.4: a large impact disc heats more cells, so it costs more',
+    );
   });
 });
 

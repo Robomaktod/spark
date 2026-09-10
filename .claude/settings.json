@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm run build:packages)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:fix)",
+      "Bash(npm run format:check)",
+      "Bash(npm run invariants)",
+      "Bash(npm test)",
+      "Bash(npm run test:web)",
+      "Bash(npm run verify)",
+      "Bash(npm run verify:replay)",
+      "Bash(npx tsc -b:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier --check:*)",
+      "Bash(node scripts/check-invariants.mjs:*)",
+      "Bash(node scripts/verify-replay.mjs:*)",
+      "Bash(node apps/cli/dist/src/main.js verify:*)",
+      "Bash(node --test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)"
+    ],
+    "ask": ["Bash(git push:*)", "Bash(npm publish:*)"],
+    "deny": ["Read(./.env)", "Read(./.env.*)", "Bash(rm -rf:*)"]
+  }
+}

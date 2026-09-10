@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    name: invariants, types, lint, tests, determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Everything except the browser half: invariants, typecheck, lint, unit
+      # tests, and a real four-round match proving determinism.
+      - run: npm run verify
+
+  browser-parity:
+    name: the browser engine matches the Node engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Runs a replay in Node and again in headless Chromium and compares every
+      # turn's state hash, then drives the viewer, the workbench and the live
+      # relay. This is the mitigation for the web plan's first listed risk.
+      - run: npm run test:web

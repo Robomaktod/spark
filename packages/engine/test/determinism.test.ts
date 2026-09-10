@@ -20,7 +20,11 @@ describe('determinism', () => {
         turn % 2 === 0
           ? { spellId: 'knife', args: { m: 3000 + turn * 10, v: 30, chill: -50, dir } }
           : { spellId: 'dart', args: { m: 500, v: 50, dir } },
-      react: { trigger: { kind: 'objectEnteredRadius', r: 10 }, spellId: 'dart', args: { m: 200, v: 40, dir: '$triggerObject' } },
+      react: {
+        trigger: { kind: 'objectEnteredRadius', r: 10 },
+        spellId: 'dart',
+        args: { m: 200, v: 40, dir: '$triggerObject' },
+      },
     };
   };
 
@@ -44,7 +48,12 @@ describe('determinism', () => {
     const rules = {
       ...DEFAULT_RULES,
       match: { ...DEFAULT_RULES.match, turnCap: 600 },
-      wizard: { ...DEFAULT_RULES.wizard, hpMilli: 100_000_000, manaCapMilli: 10_000_000, manaRegenMilli: 500_000 },
+      wizard: {
+        ...DEFAULT_RULES.wizard,
+        hpMilli: 100_000_000,
+        manaCapMilli: 10_000_000,
+        manaRegenMilli: 500_000,
+      },
     };
     const run = (): string[] => {
       const round = flatRound({ rules });
@@ -130,7 +139,11 @@ describe('map generation — passport §15', () => {
             const x = cx + dx;
             const y = cy + dy;
             if (!map.world.inBounds(x, y)) continue;
-            assert.equal(map.world.materialAt(x, y), 'air', `seed ${seed}: spawn radius not clear at ${x},${y}`);
+            assert.equal(
+              map.world.materialAt(x, y),
+              'air',
+              `seed ${seed}: spawn radius not clear at ${x},${y}`,
+            );
           }
         }
       }

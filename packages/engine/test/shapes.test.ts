@@ -71,7 +71,12 @@ describe('shape rasterisation', () => {
   it('a disc is rotation invariant, so its cost cannot be gamed by angle', () => {
     const disc = { shape: 'disc', radius: 5 } as const;
     const base = shapeCellsInDirection(disc, 1, 0).length;
-    for (const [dx, dy] of [[1, 1], [0, 1], [-3, 2], [7, -4]] as const) {
+    for (const [dx, dy] of [
+      [1, 1],
+      [0, 1],
+      [-3, 2],
+      [7, -4],
+    ] as const) {
       assert.equal(shapeCellsInDirection(disc, dx, dy).length, base);
     }
   });

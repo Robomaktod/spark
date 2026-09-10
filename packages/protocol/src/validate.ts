@@ -214,7 +214,12 @@ export function validateSpellbook(v: unknown): ValidationResult<SpellbookMessage
     : { ok: false, errors };
 }
 
-function checkArgs(v: unknown, where: string, errors: string[], allowPlaceholders: boolean): boolean {
+function checkArgs(
+  v: unknown,
+  where: string,
+  errors: string[],
+  allowPlaceholders: boolean,
+): boolean {
   if (v === undefined) return true;
   if (!isObj(v)) {
     errors.push(`${where}: expected an object`);
@@ -376,7 +381,8 @@ export function validateActions(v: unknown): ValidationResult<ActionsMessage> {
     if (!isObj(cast)) {
       errors.push('actions.cast: expected an object');
     } else {
-      if (typeof cast['spellId'] !== 'string') errors.push('actions.cast.spellId: expected a string');
+      if (typeof cast['spellId'] !== 'string')
+        errors.push('actions.cast.spellId: expected a string');
       checkArgs(cast['args'] as CastArgs | undefined, 'actions.cast.args', errors, false);
       if (cast['concentrate'] !== undefined && typeof cast['concentrate'] !== 'boolean') {
         errors.push('actions.cast.concentrate: expected a boolean');

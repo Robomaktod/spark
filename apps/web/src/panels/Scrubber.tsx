@@ -107,8 +107,20 @@ function Spark({
           opacity={0.55}
         />
       ))}
-      <path d={path(a)} fill="none" stroke="var(--a)" strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
-      <path d={path(b)} fill="none" stroke="var(--b)" strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
+      <path
+        d={path(a)}
+        fill="none"
+        stroke="var(--a)"
+        strokeWidth={0.9}
+        vectorEffect="non-scaling-stroke"
+      />
+      <path
+        d={path(b)}
+        fill="none"
+        stroke="var(--b)"
+        strokeWidth={0.9}
+        vectorEffect="non-scaling-stroke"
+      />
       {index >= 0 && (
         <line
           x1={(index / Math.max(1, count - 1)) * 100}

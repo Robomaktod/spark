@@ -182,7 +182,11 @@ export async function runMatch(options: RunOptions): Promise<RunOutcome> {
       // Keyframes are written on the round that produced them, so a restore
       // never has to know what happened in any earlier round.
       if (!round.finished && shouldKeyframe(turnsThisRound)) {
-        keyframes.push({ afterTurnIndex: turns.length - 1, round: roundNumber, snapshot: round.snapshot() });
+        keyframes.push({
+          afterTurnIndex: turns.length - 1,
+          round: roundNumber,
+          snapshot: round.snapshot(),
+        });
       }
 
       const info = roundInfos[roundInfos.length - 1]!;

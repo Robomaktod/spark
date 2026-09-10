@@ -45,8 +45,16 @@ describe('spellbook paging', () => {
   it('rejects a book over the page budget', () => {
     const greedy: SpellTemplate = {
       id: 'greedy',
-      body: { shape: 'disc', radius: 8, material: 'stone', mass: { param: 'm', min: 100, max: 100_000 } },
-      launch: { direction: { param: 'dir', type: 'vec2' }, speed: { param: 'v', min: 0, max: 200 } },
+      body: {
+        shape: 'disc',
+        radius: 8,
+        material: 'stone',
+        mass: { param: 'm', min: 100, max: 100_000 },
+      },
+      launch: {
+        direction: { param: 'dir', type: 'vec2' },
+        speed: { param: 'v', min: 0, max: 200 },
+      },
       onImpact: {
         shape: 'disc',
         radius: 8,
@@ -55,7 +63,10 @@ describe('spellbook paging', () => {
     };
     const check = checkSpellbook([greedy], R);
     assert.equal(check.ok, false);
-    assert.ok(check.errors.some((e) => e.includes('page')), check.errors.join('; '));
+    assert.ok(
+      check.errors.some((e) => e.includes('page')),
+      check.errors.join('; '),
+    );
   });
 });
 
@@ -69,13 +80,19 @@ describe('spellbook validation', () => {
     };
     const check = checkSpellbook([feather], R);
     assert.equal(check.ok, false);
-    assert.ok(check.errors.some((e) => e.includes('mass floor') || e.includes('below')), check.errors.join('; '));
+    assert.ok(
+      check.errors.some((e) => e.includes('mass floor') || e.includes('below')),
+      check.errors.join('; '),
+    );
   });
 
   it('refuses duplicate ids and malformed templates', () => {
     assert.equal(checkSpellbook([ICE_KNIFE, ICE_KNIFE], R).ok, false);
     assert.equal(checkSpellbook([{ id: 'x' }], R).ok, false);
-    assert.equal(checkSpellbook([{ ...ICE_KNIFE, body: { ...ICE_KNIFE.body, material: 'cheese' } }], R).ok, false);
+    assert.equal(
+      checkSpellbook([{ ...ICE_KNIFE, body: { ...ICE_KNIFE.body, material: 'cheese' } }], R).ok,
+      false,
+    );
   });
 
   it('reports per-spell page costs so a bot can see where the book went', () => {

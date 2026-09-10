@@ -27,7 +27,8 @@ export default defineConfig({
         parity: 'src/parity.ts',
       },
       output: {
-        entryFileNames: (chunk) => (chunk.name === 'parity' ? 'assets/parity.js' : 'assets/[name]-[hash].js'),
+        entryFileNames: (chunk) =>
+          chunk.name === 'parity' ? 'assets/parity.js' : 'assets/[name]-[hash].js',
       },
     },
   },

@@ -107,11 +107,21 @@ async function main(): Promise<void> {
     if (args.round !== null && f.roundNumber !== args.round) continue;
 
     const header =
-      'SPARK  seed ' + replay.seed +
-      '   round ' + f.roundNumber + '/' + totalRounds +
-      '   turn ' + f.turn + '/' + rules.match.turnCap +
-      '   ' + f.side + ' acted' +
-      '   hash ' + f.hash;
+      'SPARK  seed ' +
+      replay.seed +
+      '   round ' +
+      f.roundNumber +
+      '/' +
+      totalRounds +
+      '   turn ' +
+      f.turn +
+      '/' +
+      rules.match.turnCap +
+      '   ' +
+      f.side +
+      ' acted' +
+      '   hash ' +
+      f.hash;
     clear();
     process.stdout.write(frame(f.round, replay, header, eventLines, options) + '\n');
     if (!args.dump && args.speedMs > 0) await sleep(args.speedMs);
@@ -120,15 +130,29 @@ async function main(): Promise<void> {
   process.stdout.write('\n' + LEGEND + '\n\n');
   for (const r of replay.result.rounds) {
     process.stdout.write(
-      'round ' + r.round + ' (game ' + r.game + '): ' +
-        (r.winner ? r.winner + ' wins' : 'tie') + ' after ' + r.turns + ' turns (' + r.reason + ')\n',
+      'round ' +
+        r.round +
+        ' (game ' +
+        r.game +
+        '): ' +
+        (r.winner ? r.winner + ' wins' : 'tie') +
+        ' after ' +
+        r.turns +
+        ' turns (' +
+        r.reason +
+        ')\n',
     );
   }
   const res = replay.result;
   process.stdout.write(
-    '\nfinal  A ' + res.scores.A + ' : ' + res.scores.B + ' B   ' +
+    '\nfinal  A ' +
+      res.scores.A +
+      ' : ' +
+      res.scores.B +
+      ' B   ' +
       (res.winner ? res.winner + ' wins the match' : 'draw') +
-      (res.tiebreak === 'mana' ? ' (mana tiebreak)' : '') + '\n',
+      (res.tiebreak === 'mana' ? ' (mana tiebreak)' : '') +
+      '\n',
   );
 
   const stderrLines = replay.turns.flatMap((t): readonly string[] => t.stderr);

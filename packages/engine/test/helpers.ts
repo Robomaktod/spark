@@ -1,4 +1,10 @@
-import { DEFAULT_RULES, type ActionsMessage, type Rules, type Side, type SpellTemplate } from '@spark/protocol';
+import {
+  DEFAULT_RULES,
+  type ActionsMessage,
+  type Rules,
+  type Side,
+  type SpellTemplate,
+} from '@spark/protocol';
 import { Match, Round, Spellbook, World, generateMap } from '../src/index.js';
 
 export const RULES = DEFAULT_RULES;
@@ -81,7 +87,10 @@ export function generatedRound(seed: string, rules: Rules = RULES): Round {
     rules,
     world: map.world,
     spawns: map.spawns,
-    spellbooks: { A: book([ICE_KNIFE, DART, WALL], rules), B: book([ICE_KNIFE, DART, WALL], rules) },
+    spellbooks: {
+      A: book([ICE_KNIFE, DART, WALL], rules),
+      B: book([ICE_KNIFE, DART, WALL], rules),
+    },
     firstMover: 'A',
     round: 1,
     game: 1,
@@ -99,7 +108,10 @@ export function playMatch(
   const match = new Match({
     rules,
     seed,
-    spellbooks: { A: book([ICE_KNIFE, DART, WALL], rules), B: book([ICE_KNIFE, DART, WALL], rules) },
+    spellbooks: {
+      A: book([ICE_KNIFE, DART, WALL], rules),
+      B: book([ICE_KNIFE, DART, WALL], rules),
+    },
   });
   const hashes: string[] = [];
   let guard = 0;

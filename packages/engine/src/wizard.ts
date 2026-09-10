@@ -6,7 +6,7 @@ import type { Rules, SelfView, Side, OpponentView, Vec2 } from '@spark/protocol'
 import { MILLI_HP_PER_HP, MILLI_MANA_PER_MANA } from '@spark/protocol';
 import type { Cell } from './shapes.js';
 import { FACING_VECTORS } from './shapes.js';
-import { Hasher } from './hash.js';
+import type { Hasher } from './hash.js';
 import { idivRound, isqrt } from './fp.js';
 
 /** Unit vector of a facing, in milli-cells, so diagonals are not longer than cardinals. */
@@ -67,7 +67,8 @@ export class Wizard {
    */
   wandCell(extraOffset = 0): Cell {
     const [ux, uy] = facingUnitMilli(this.facing);
-    const dist = this.rules.wizard.footprintRadius + this.rules.wizard.wandOffsetCells + extraOffset;
+    const dist =
+      this.rules.wizard.footprintRadius + this.rules.wizard.wandOffsetCells + extraOffset;
     return [this.x + idivRound(ux * dist, 1000), this.y + idivRound(uy * dist, 1000)];
   }
 

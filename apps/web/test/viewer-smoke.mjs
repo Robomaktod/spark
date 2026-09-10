@@ -65,7 +65,11 @@ try {
   await page.waitForTimeout(1500);
   await page.screenshot({ path: join(shots, 'workbench.png') });
   const workbench = (await page.textContent('.card table')) ?? '';
-  check('workbench prices a cast', /total/.test(workbench), workbench.slice(0, 80).replace(/\s+/g, ' '));
+  check(
+    'workbench prices a cast',
+    /total/.test(workbench),
+    workbench.slice(0, 80).replace(/\s+/g, ' '),
+  );
   check('workbench runs the sandbox', (await page.locator('.eventlog div').count()) > 3);
 
   await page.goto(BASE + '/rules', { waitUntil: 'networkidle' });

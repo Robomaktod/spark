@@ -35,7 +35,8 @@ async function bootstrap(): Promise<void> {
     app.useStaticAssets(webDir);
     // The viewer is a client-routed SPA, so unknown paths return the shell.
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.includes('.')) return next();
+      if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.includes('.'))
+        return next();
       res.sendFile(resolve(webDir, 'index.html'));
     });
     log.log(`serving the viewer from ${webDir}`);

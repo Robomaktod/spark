@@ -5,7 +5,10 @@ import { flatRound, PASS } from './helpers.js';
 
 const R = DEFAULT_RULES;
 
-const castKnife = (dir: [number, number], over: Partial<Record<string, number>> = {}): ActionsMessage => ({
+const castKnife = (
+  dir: [number, number],
+  over: Partial<Record<string, number>> = {},
+): ActionsMessage => ({
   type: 'actions',
   cast: { spellId: 'knife', args: { m: 7200, v: 40, chill: 0, dir, ...over } },
 });
@@ -18,7 +21,10 @@ describe('physics step', () => {
     const first = round.objects[0]!;
     const startX = first.cellX;
     round.submit(PASS);
-    assert.ok(first.cellX > startX + 30, `travelled only ${first.cellX - startX} cells in one turn`);
+    assert.ok(
+      first.cellX > startX + 30,
+      `travelled only ${first.cellX - startX} cells in one turn`,
+    );
     const afterOne = first.cellX;
     round.submit(PASS);
     assert.ok(first.cellX > afterOne, 'objects move on both players turns');
@@ -26,17 +32,27 @@ describe('physics step', () => {
 
   it('bleeds speed to drag and settles a slow object as terrain', () => {
     const round = flatRound();
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 7200, v: 3, chill: -6000, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 7200, v: 3, chill: -6000, dir: [1, 0] } },
+    });
     const obj = round.objects[0]!;
     const at = [obj.cellX, obj.cellY] as const;
     for (let i = 0; i < 6 && round.objects.length > 0; i++) round.submit(PASS);
     assert.equal(round.objects.length, 0, 'a slow object should have settled');
-    assert.equal(round.world.materialAt(at[0], at[1]), 'ice', 'settled matter writes itself into cells');
+    assert.equal(
+      round.world.materialAt(at[0], at[1]),
+      'ice',
+      'settled matter writes itself into cells',
+    );
   });
 
   it('settled ice melts once it warms past zero, leaving water behind', () => {
     const round = flatRound();
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 7200, v: 3, chill: 0, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 7200, v: 3, chill: 0, dir: [1, 0] } },
+    });
     const at = [round.objects[0]!.cellX, round.objects[0]!.cellY] as const;
     for (let i = 0; i < 6 && round.objects.length > 0; i++) round.submit(PASS);
     assert.equal(
@@ -47,7 +63,12 @@ describe('physics step', () => {
   });
 
   it('stops an object at the arena boundary instead of letting it escape', () => {
-    const round = flatRound({ spawns: [[20, 100], [180, 100]] });
+    const round = flatRound({
+      spawns: [
+        [20, 100],
+        [180, 100],
+      ],
+    });
     // Turn west first: the wand sits ahead along the facing, so firing west
     // while facing east would put the knife straight back through the caster.
     round.submit({
@@ -87,11 +108,19 @@ describe('physics step', () => {
     for (let y = 90; y < 110; y++) round.world.writeCell(60, y, 'rubble', { heightMm: 400 });
     round.submit(castKnife([1, 0]));
     round.submit(PASS);
-    assert.ok(round.objects[0] && round.objects[0].cellX > 70, 'rubble at 400 mm blocks nothing in flight');
+    assert.ok(
+      round.objects[0] && round.objects[0].cellX > 70,
+      'rubble at 400 mm blocks nothing in flight',
+    );
   });
 
   it('destroys both objects when two collide', () => {
-    const round = flatRound({ spawns: [[40, 100], [160, 100]] });
+    const round = flatRound({
+      spawns: [
+        [40, 100],
+        [160, 100],
+      ],
+    });
     round.submit(castKnife([1, 0], { v: 15 }));
     round.submit(castKnife([-1, 0], { v: 15 }));
     for (let i = 0; i < 10 && round.objects.length > 1; i++) round.submit(PASS);
@@ -104,15 +133,28 @@ describe('physics step', () => {
   it('lets a careless caster shoot itself, because self-damage is enabled', () => {
     // Passport §8: the wand-origin rule prevents the worst self-inflicted
     // cases, but not carelessness. Firing backwards is carelessness.
-    const round = flatRound({ spawns: [[100, 100], [180, 100]] });
+    const round = flatRound({
+      spawns: [
+        [100, 100],
+        [180, 100],
+      ],
+    });
     const before = round.wizards.A.hpMilli;
     round.submit(castKnife([-1, 0]));
-    assert.ok(round.wizards.A.hpMilli < before, 'a knife thrown backwards passes through its caster');
+    assert.ok(
+      round.wizards.A.hpMilli < before,
+      'a knife thrown backwards passes through its caster',
+    );
     assert.ok(round.events.some((e) => e.t === 'impact_wizard' && e.target === 'A'));
   });
 
   it('damages a wizard in proportion to coverage', () => {
-    const round = flatRound({ spawns: [[80, 100], [120, 100]] });
+    const round = flatRound({
+      spawns: [
+        [80, 100],
+        [120, 100],
+      ],
+    });
     const before = round.wizards.B.hpMilli;
     round.submit(castKnife([1, 0]));
     for (let i = 0; i < 4 && round.wizards.B.hpMilli === before; i++) round.submit(PASS);
@@ -195,7 +237,11 @@ describe('mana upkeep and regen — passport §12 steps 7 and 8', () => {
     const round = flatRound();
     round.submit({
       type: 'actions',
-      cast: { spellId: 'knife', args: { m: 8000, v: 5, chill: -6000, dir: [1, 0] }, concentrate: true },
+      cast: {
+        spellId: 'knife',
+        args: { m: 8000, v: 5, chill: -6000, dir: [1, 0] },
+        concentrate: true,
+      },
     });
     const obj = round.objects[0]!;
     assert.equal(obj.concentrated, true);
@@ -217,7 +263,11 @@ describe('mana upkeep and regen — passport §12 steps 7 and 8', () => {
     const held = flatRound();
     held.submit({
       type: 'actions',
-      cast: { spellId: 'knife', args: { m: 8000, v: 5, chill: -6000, dir: [1, 0] }, concentrate: true },
+      cast: {
+        spellId: 'knife',
+        args: { m: 8000, v: 5, chill: -6000, dir: [1, 0] },
+        concentrate: true,
+      },
     });
     const heldTemp = held.objects[0]!.temperatureMilliC;
     held.submit(PASS);
@@ -230,6 +280,9 @@ describe('mana upkeep and regen — passport §12 steps 7 and 8', () => {
     });
     const looseTemp = loose.objects[0]!.temperatureMilliC;
     loose.submit(PASS);
-    assert.ok(loose.objects[0]!.temperatureMilliC > looseTemp, 'an unheld object decays toward ambient');
+    assert.ok(
+      loose.objects[0]!.temperatureMilliC > looseTemp,
+      'an unheld object decays toward ambient',
+    );
   });
 });

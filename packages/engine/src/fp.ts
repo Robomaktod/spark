@@ -11,7 +11,8 @@
 export class FixedPointError extends Error {}
 
 export function assertInt(v: number, what: string): number {
-  if (!Number.isSafeInteger(v)) throw new FixedPointError(`${what}: expected a safe integer, got ${v}`);
+  if (!Number.isSafeInteger(v))
+    throw new FixedPointError(`${what}: expected a safe integer, got ${v}`);
   return v;
 }
 
@@ -69,6 +70,7 @@ export function toSafeNumber(v: bigint, what: string): number {
 export function isqrtBig(n: bigint): bigint {
   if (n < 0n) throw new FixedPointError('isqrt: negative input');
   if (n < 2n) return n;
+  // invariant-ok(determinism): float seed only; the loops below correct it exactly
   let r = BigInt(Math.floor(Math.sqrt(Number(n))));
   if (r <= 0n) r = 1n;
   for (let i = 0; i < 64; i++) {
@@ -113,6 +115,8 @@ export function sign(v: number): number {
  * than computed from Math.cos, because Math.cos is not specified to give the
  * same bits on every engine and determinism is a hard requirement.
  */
+// Ten per line so the table can be checked against a reference table.
+// prettier-ignore
 export const COS_MILLI_0_TO_90: readonly number[] = [
   1000, 1000, 999, 999, 998, 996, 995, 993, 990, 988,
   985, 982, 978, 974, 970, 966, 961, 956, 951, 946,

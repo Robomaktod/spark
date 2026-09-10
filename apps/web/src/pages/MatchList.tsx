@@ -8,6 +8,7 @@ import type { ReplaySummary } from '@spark/replay';
 import { listLive, listReplays, type LiveSummary } from '../state/api.js';
 
 function scoreLine(s: ReplaySummary): string {
+  if (s.partial) return 'cut short';
   const r = s.result;
   const who = r.winner ? `${r.winner} wins` : 'draw';
   return `${r.scores.A} – ${r.scores.B}  ${who}${r.tiebreak === 'mana' ? ' (mana)' : ''}`;

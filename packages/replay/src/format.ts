@@ -75,6 +75,13 @@ export interface ReplayFile {
   readonly keyframes: readonly ReplayKeyframe[];
   readonly result: MatchResult;
   readonly finishedAt: string;
+  /**
+   * True when the match did not run to completion — the CLI was stopped, or
+   * crashed, part way through. The turns present are still real and still
+   * reproduce; there is just no result and there are no keyframes, so seeking
+   * backwards replays from the start of the round.
+   */
+  readonly partial?: boolean;
 }
 
 /** Summary shown in the match list, without shipping the whole file. */
@@ -86,6 +93,45 @@ export interface ReplaySummary {
   readonly turnCount: number;
   readonly finishedAt: string;
   readonly sizeBytes?: number;
+  readonly partial?: boolean;
+}
+
+/**
+ * Assembles a replay from a live stream that stopped early.
+ *
+ * A producer that disconnects without an `end` frame has still played real
+ * turns, and someone holding the link should get to see them rather than a 404.
+ * Round metadata is derived from the turns themselves, because the live header
+ * is sent before the first round has finished.
+ */
+export function finaliseLive(header: ReplayFile, turns: readonly ReplayTurn[]): ReplayFile {
+  const rounds: ReplayRoundInfo[] = [];
+  turns.forEach((t, index) => {
+    const last = rounds[rounds.length - 1];
+    if (!last || last.round !== t.round) {
+      rounds.push({
+        round: t.round,
+        game: Math.ceil(t.round / Math.max(1, header.rules.match.roundsPerGame)),
+        firstMover: t.round % 2 === 1 ? 'A' : 'B',
+        firstTurnIndex: index,
+        turnCount: 1,
+        winner: null,
+        reason: 'interrupted',
+      });
+      return;
+    }
+    rounds[rounds.length - 1] = { ...last, turnCount: last.turnCount + 1 };
+  });
+
+  return {
+    ...header,
+    rounds,
+    turns: [...turns],
+    keyframes: [],
+    partial: true,
+    // invariant-ok(determinism): file metadata, not simulation input
+    finishedAt: new Date().toISOString(),
+  };
 }
 
 export function summarise(replay: ReplayFile, sizeBytes?: number): ReplaySummary {
@@ -96,6 +142,7 @@ export function summarise(replay: ReplayFile, sizeBytes?: number): ReplaySummary
     result: replay.result,
     turnCount: replay.turns.length,
     finishedAt: replay.finishedAt,
+    ...(replay.partial ? { partial: true } : {}),
     ...(sizeBytes === undefined ? {} : { sizeBytes }),
   };
 }

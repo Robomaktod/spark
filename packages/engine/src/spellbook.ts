@@ -42,7 +42,9 @@ export function pagesForSpell(template: SpellTemplate, rules: Rules): SpellPages
 
   const bodyCells = shapeCellCount(template.body as unknown as ShapeSpec);
   const impactCells = template.onImpact ? shapeCellCount(template.onImpact) : 0;
-  const shapeMilli = Math.floor(((bodyCells + impactCells) * 1000) / rules.spellbook.shapeCellsDivisor);
+  const shapeMilli = Math.floor(
+    ((bodyCells + impactCells) * 1000) / rules.spellbook.shapeCellsDivisor,
+  );
 
   let rangeMilli = 0;
   rangeMilli += rangeMilliPages(template.body.mass, 'massG', rules);
@@ -77,7 +79,9 @@ export function checkSpellbook(spells: readonly unknown[], rules: Rules): Spellb
   let pagesUsed = 0;
 
   if (spells.length > rules.spellbook.maxSpells) {
-    errors.push(`spellbook: ${spells.length} spells exceeds the limit of ${rules.spellbook.maxSpells}`);
+    errors.push(
+      `spellbook: ${spells.length} spells exceeds the limit of ${rules.spellbook.maxSpells}`,
+    );
   }
 
   const seen = new Set<string>();
@@ -94,10 +98,14 @@ export function checkSpellbook(spells: readonly unknown[], rules: Rules): Spellb
     const bodyCells = shapeCellCount(t.body as unknown as ShapeSpec);
     const impactCells = t.onImpact ? shapeCellCount(t.onImpact) : 0;
     if (bodyCells > rules.spellbook.maxShapeCells) {
-      errors.push(`spells[${i}] "${t.id}": body covers ${bodyCells} cells, limit ${rules.spellbook.maxShapeCells}`);
+      errors.push(
+        `spells[${i}] "${t.id}": body covers ${bodyCells} cells, limit ${rules.spellbook.maxShapeCells}`,
+      );
     }
     if (impactCells > rules.spellbook.maxShapeCells) {
-      errors.push(`spells[${i}] "${t.id}": impact covers ${impactCells} cells, limit ${rules.spellbook.maxShapeCells}`);
+      errors.push(
+        `spells[${i}] "${t.id}": impact covers ${impactCells} cells, limit ${rules.spellbook.maxShapeCells}`,
+      );
     }
     if ((t.onImpact?.ops.length ?? 0) > rules.spellbook.maxOpsPerSpell) {
       errors.push(`spells[${i}] "${t.id}": more than ${rules.spellbook.maxOpsPerSpell} impact ops`);

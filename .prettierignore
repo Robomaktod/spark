@@ -1,0 +1,7 @@
+dist/
+node_modules/
+replays/
+*.tsbuildinfo
+package-lock.json
+docs/project-passport.md
+docs/web-plan.md

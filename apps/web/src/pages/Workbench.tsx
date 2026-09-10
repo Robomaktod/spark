@@ -104,7 +104,11 @@ function shapeOf(
     case 'disc':
       return { shape: 'disc', radius: Math.max(1, d.radius) };
     case 'cone':
-      return { shape: 'cone', radius: Math.max(1, d.radius), halfAngleDeg: Math.max(1, Math.min(90, d.angle)) };
+      return {
+        shape: 'cone',
+        radius: Math.max(1, d.radius),
+        halfAngleDeg: Math.max(1, Math.min(90, d.angle)),
+      };
     case 'rect':
       return { shape: 'rect', length: Math.max(1, d.length), width: Math.max(1, d.width) };
   }
@@ -123,12 +127,17 @@ function templateOf(d: Draft): SpellTemplate {
     width: d.impactWidth,
     angle: d.impactAngle,
   });
-  const ops: SpellTemplate['onImpact'] extends infer T ? (T extends { ops: infer O } ? O : never) : never =
-    [] as never;
+  const ops: SpellTemplate['onImpact'] extends infer T
+    ? T extends { ops: infer O }
+      ? O
+      : never
+    : never = [] as never;
   const opList: { op: string; value?: unknown }[] = [];
   if (d.transferKinetic) opList.push({ op: 'transferKinetic' });
-  if (d.useTemp) opList.push({ op: 'addTemperature', value: { param: 'heat', min: d.tempMin, max: d.tempMax } });
-  if (d.useBind) opList.push({ op: 'setBinding', value: { param: 'bind', min: d.bindMin, max: d.bindMax } });
+  if (d.useTemp)
+    opList.push({ op: 'addTemperature', value: { param: 'heat', min: d.tempMin, max: d.tempMax } });
+  if (d.useBind)
+    opList.push({ op: 'setBinding', value: { param: 'bind', min: d.bindMin, max: d.bindMax } });
   void ops;
 
   return {
@@ -138,7 +147,10 @@ function templateOf(d: Draft): SpellTemplate {
       direction: { param: 'dir', type: 'vec2' },
       speed: { param: 'v', min: d.speedMin, max: d.speedMax },
     },
-    onImpact: { ...impact, ops: opList as SpellTemplate['onImpact'] extends { ops: infer O } ? O : never },
+    onImpact: {
+      ...impact,
+      ops: opList as SpellTemplate['onImpact'] extends { ops: infer O } ? O : never,
+    },
   } as SpellTemplate;
 }
 
@@ -164,7 +176,19 @@ interface SandboxResult {
 function runSandbox(template: SpellTemplate, d: Draft, targetDistance: number): SandboxResult {
   const log: string[] = [];
   const check = checkSpellbook([template], RULES);
-  if (!check.ok) return { ok: false, reason: check.errors[0], turns: 0, distance: 0, hit: false, damageMilli: 0, overlap: 0, impactCells: 0, keMilliJ: 0, log };
+  if (!check.ok)
+    return {
+      ok: false,
+      reason: check.errors[0],
+      turns: 0,
+      distance: 0,
+      hit: false,
+      damageMilli: 0,
+      overlap: 0,
+      impactCells: 0,
+      keMilliJ: 0,
+      log,
+    };
 
   const world = new World(RULES);
   const casterX = 20;
@@ -255,7 +279,12 @@ function Num({
   return (
     <label className="field">
       <span>{label}</span>
-      <input type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      <input
+        type="number"
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
     </label>
   );
 }
@@ -277,8 +306,8 @@ export function Workbench(): React.JSX.Element {
     <div className="page">
       <h1>Spell workbench</h1>
       <p className="dim" style={{ marginTop: 0 }}>
-        Everything below is computed by the same engine that runs matches. Cost is
-        the engine's own arithmetic, not a copy of it.
+        Everything below is computed by the same engine that runs matches. Cost is the engine's own
+        arithmetic, not a copy of it.
       </p>
 
       <div className="workbench" style={{ marginTop: 18 }}>
@@ -290,7 +319,10 @@ export function Workbench(): React.JSX.Element {
           </label>
           <label className="field">
             <span>material (fixed at registration)</span>
-            <select value={draft.material} onChange={(e) => set('material', e.target.value as MaterialId)}>
+            <select
+              value={draft.material}
+              onChange={(e) => set('material', e.target.value as MaterialId)}
+            >
               {MATERIAL_IDS.map((m) => (
                 <option key={m} value={m}>
                   {m}
@@ -302,7 +334,10 @@ export function Workbench(): React.JSX.Element {
           <h3 style={{ marginTop: 14 }}>Body</h3>
           <label className="field">
             <span>shape</span>
-            <select value={draft.bodyShape} onChange={(e) => set('bodyShape', e.target.value as Draft['bodyShape'])}>
+            <select
+              value={draft.bodyShape}
+              onChange={(e) => set('bodyShape', e.target.value as Draft['bodyShape'])}
+            >
               {SHAPES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -321,12 +356,26 @@ export function Workbench(): React.JSX.Element {
               <Num label="radius" value={draft.bodyRadius} onChange={(v) => set('bodyRadius', v)} />
             )}
             {draft.bodyShape === 'cone' && (
-              <Num label="half angle" value={draft.bodyAngle} onChange={(v) => set('bodyAngle', v)} />
+              <Num
+                label="half angle"
+                value={draft.bodyAngle}
+                onChange={(v) => set('bodyAngle', v)}
+              />
             )}
           </div>
           <div className="row2">
-            <Num label="mass min (g)" value={draft.massMin} onChange={(v) => set('massMin', v)} step={100} />
-            <Num label="mass max (g)" value={draft.massMax} onChange={(v) => set('massMax', v)} step={100} />
+            <Num
+              label="mass min (g)"
+              value={draft.massMin}
+              onChange={(v) => set('massMin', v)}
+              step={100}
+            />
+            <Num
+              label="mass max (g)"
+              value={draft.massMax}
+              onChange={(v) => set('massMax', v)}
+              step={100}
+            />
           </div>
           <div className="row2">
             <Num label="speed min" value={draft.speedMin} onChange={(v) => set('speedMin', v)} />
@@ -349,16 +398,32 @@ export function Workbench(): React.JSX.Element {
           </label>
           <div className="row2">
             {(draft.impactShape === 'disc' || draft.impactShape === 'cone') && (
-              <Num label="radius" value={draft.impactRadius} onChange={(v) => set('impactRadius', v)} />
+              <Num
+                label="radius"
+                value={draft.impactRadius}
+                onChange={(v) => set('impactRadius', v)}
+              />
             )}
             {(draft.impactShape === 'line' || draft.impactShape === 'rect') && (
-              <Num label="length" value={draft.impactLength} onChange={(v) => set('impactLength', v)} />
+              <Num
+                label="length"
+                value={draft.impactLength}
+                onChange={(v) => set('impactLength', v)}
+              />
             )}
             {draft.impactShape === 'rect' && (
-              <Num label="width" value={draft.impactWidth} onChange={(v) => set('impactWidth', v)} />
+              <Num
+                label="width"
+                value={draft.impactWidth}
+                onChange={(v) => set('impactWidth', v)}
+              />
             )}
             {draft.impactShape === 'cone' && (
-              <Num label="half angle" value={draft.impactAngle} onChange={(v) => set('impactAngle', v)} />
+              <Num
+                label="half angle"
+                value={draft.impactAngle}
+                onChange={(v) => set('impactAngle', v)}
+              />
             )}
           </div>
           <label className="field">
@@ -381,8 +446,18 @@ export function Workbench(): React.JSX.Element {
           </label>
           {draft.useTemp && (
             <div className="row2">
-              <Num label="min" value={draft.tempMin} onChange={(v) => set('tempMin', v)} step={100} />
-              <Num label="max" value={draft.tempMax} onChange={(v) => set('tempMax', v)} step={100} />
+              <Num
+                label="min"
+                value={draft.tempMin}
+                onChange={(v) => set('tempMin', v)}
+                step={100}
+              />
+              <Num
+                label="max"
+                value={draft.tempMax}
+                onChange={(v) => set('tempMax', v)}
+                step={100}
+              />
             </div>
           )}
           <label className="field">
@@ -403,14 +478,34 @@ export function Workbench(): React.JSX.Element {
 
           <h3 style={{ marginTop: 14 }}>Test cast</h3>
           <div className="row2">
-            <Num label="mass (g)" value={draft.testMass} onChange={(v) => set('testMass', v)} step={100} />
+            <Num
+              label="mass (g)"
+              value={draft.testMass}
+              onChange={(v) => set('testMass', v)}
+              step={100}
+            />
             <Num label="speed" value={draft.testSpeed} onChange={(v) => set('testSpeed', v)} />
           </div>
           {draft.useTemp && (
-            <Num label="addTemperature value" value={draft.testTemp} onChange={(v) => set('testTemp', v)} step={100} />
+            <Num
+              label="addTemperature value"
+              value={draft.testTemp}
+              onChange={(v) => set('testTemp', v)}
+              step={100}
+            />
           )}
-          {draft.useBind && <Num label="setBinding value" value={draft.testBind} onChange={(v) => set('testBind', v)} />}
-          <Num label="target distance (cells)" value={targetDistance} onChange={setTargetDistance} />
+          {draft.useBind && (
+            <Num
+              label="setBinding value"
+              value={draft.testBind}
+              onChange={(v) => set('testBind', v)}
+            />
+          )}
+          <Num
+            label="target distance (cells)"
+            value={targetDistance}
+            onChange={setTargetDistance}
+          />
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button onClick={() => setPinned(draft)}>pin for comparison</button>
@@ -458,7 +553,12 @@ function analyse(d: Draft, targetDistance: number): Analysed {
   const bodyCells = shapeCellCount(bodyShape);
   const impactCells = shapeCellCount(impactShape);
 
-  const at = (massG: number, speed: number, temp: number, bind: number): ReturnType<typeof costOfCast> =>
+  const at = (
+    massG: number,
+    speed: number,
+    temp: number,
+    bind: number,
+  ): ReturnType<typeof costOfCast> =>
     costOfCast(
       {
         bodyMassG: massG,
@@ -477,7 +577,12 @@ function analyse(d: Draft, targetDistance: number): Analysed {
 
   const worst = (lo: number, hi: number): number => (Math.abs(lo) > Math.abs(hi) ? lo : hi);
   const min = at(Math.max(RULES.physics.minBodyMassG, d.massMin), d.speedMin, 0, 0).total;
-  const max = at(Math.max(RULES.physics.minBodyMassG, d.massMax), d.speedMax, worst(d.tempMin, d.tempMax), worst(d.bindMin, d.bindMax)).total;
+  const max = at(
+    Math.max(RULES.physics.minBodyMassG, d.massMax),
+    d.speedMax,
+    worst(d.tempMin, d.tempMax),
+    worst(d.bindMin, d.bindMax),
+  ).total;
   const breakdown = at(d.testMass, d.testSpeed, d.testTemp, d.testBind);
 
   const energy = keMilliJ(d.testMass, d.testSpeed * 1000);
@@ -610,8 +715,8 @@ function Analysis({ a, b }: { a: Analysed; b: Analysed | null }): React.JSX.Elem
         </table>
         {!a.sandbox.hit && a.sandbox.ok && (
           <div className="faint" style={{ fontSize: 12, marginTop: 8 }}>
-            It fell short or missed. Range is paid as velocity, and impulse is
-            quadratic in it — doubling the reach quadruples the mana.
+            It fell short or missed. Range is paid as velocity, and impulse is quadratic in it —
+            doubling the reach quadruples the mana.
           </div>
         )}
       </div>

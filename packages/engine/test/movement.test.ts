@@ -15,7 +15,18 @@ function setup(): { world: World; wizard: Wizard } {
 describe('movement', () => {
   it('spends 1 MP per cell in any of the eight directions', () => {
     const { world, wizard } = setup();
-    const out = applyMove(world, wizard, { path: [[1, 0], [1, 1], [0, 1]] }, R);
+    const out = applyMove(
+      world,
+      wizard,
+      {
+        path: [
+          [1, 0],
+          [1, 1],
+          [0, 1],
+        ],
+      },
+      R,
+    );
     assert.equal(out.mpSpent, 3);
     assert.deepEqual([wizard.x, wizard.y], [52, 52]);
     assert.equal(wizard.mp, R.wizard.mpPerTurn - 3);
@@ -31,7 +42,12 @@ describe('movement', () => {
   it('stops at the last legal cell and keeps the unspent MP', () => {
     const { world, wizard } = setup();
     for (let dy = -3; dy <= 3; dy++) world.writeCell(55, 50 + dy, 'stone');
-    const out = applyMove(world, wizard, { path: Array.from({ length: 8 }, () => [1, 0] as const) }, R);
+    const out = applyMove(
+      world,
+      wizard,
+      { path: Array.from({ length: 8 }, () => [1, 0] as const) },
+      R,
+    );
     assert.ok(out.stoppedEarly, 'should have hit the wall');
     assert.ok(wizard.x < 53, `walked to ${wizard.x}, should have stopped short of the wall`);
     assert.ok(wizard.mp > 0, 'unspent MP is retained');
@@ -43,7 +59,11 @@ describe('movement', () => {
       if (y >= 48 && y <= 51) continue; // a 4-cell gap
       world.writeCell(60, y, 'stone');
     }
-    assert.equal(footprintLegal(world, R, 60, 50), false, 'a 4-cell gap must not admit a 5-cell wizard');
+    assert.equal(
+      footprintLegal(world, R, 60, 50),
+      false,
+      'a 4-cell gap must not admit a 5-cell wizard',
+    );
     world.clearToAir(60, 52);
     assert.equal(footprintLegal(world, R, 60, 50), true, 'a 5-cell gap must');
   });

@@ -9,7 +9,7 @@
  */
 import type { CellView, MaterialId, Rules } from '@spark/protocol';
 import { MATERIALS, MATERIAL_IDS, MATERIAL_INDEX } from '@spark/protocol';
-import { Hasher } from './hash.js';
+import type { Hasher } from './hash.js';
 
 export class World {
   readonly width: number;
@@ -244,7 +244,14 @@ export class World {
     const out: number[] = [];
     for (let i = 0; i < this.material.length; i++) {
       if (this.isAmbientAir(i)) continue;
-      out.push(i, this.material[i]!, this.mass[i]!, this.temperature[i]!, this.binding[i]!, this.heightMm[i]!);
+      out.push(
+        i,
+        this.material[i]!,
+        this.mass[i]!,
+        this.temperature[i]!,
+        this.binding[i]!,
+        this.heightMm[i]!,
+      );
     }
     return out;
   }
@@ -277,11 +284,24 @@ export class World {
   diffFromSparse(baseline: readonly number[]): number[] {
     const before = new Map<number, [number, number, number, number, number]>();
     for (let k = 0; k + 5 < baseline.length; k += 6) {
-      before.set(baseline[k]!, [baseline[k + 1]!, baseline[k + 2]!, baseline[k + 3]!, baseline[k + 4]!, baseline[k + 5]!]);
+      before.set(baseline[k]!, [
+        baseline[k + 1]!,
+        baseline[k + 2]!,
+        baseline[k + 3]!,
+        baseline[k + 4]!,
+        baseline[k + 5]!,
+      ]);
     }
     const out: number[] = [];
     const emit = (i: number): void => {
-      out.push(i, this.material[i]!, this.mass[i]!, this.temperature[i]!, this.binding[i]!, this.heightMm[i]!);
+      out.push(
+        i,
+        this.material[i]!,
+        this.mass[i]!,
+        this.temperature[i]!,
+        this.binding[i]!,
+        this.heightMm[i]!,
+      );
     };
     const seen = new Set<number>();
     for (let i = 0; i < this.material.length; i++) {

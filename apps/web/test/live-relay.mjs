@@ -23,16 +23,37 @@ const check = (label, ok, detail) => {
 function runLiveMatch(seed) {
   return spawn(
     'node',
-    [fromRepo('apps/cli/dist/src/main.js'), 'run', '--seed', seed, '--quiet', '--publish', BASE, '--live'],
+    [
+      fromRepo('apps/cli/dist/src/main.js'),
+      'run',
+      '--seed',
+      seed,
+      '--quiet',
+      '--publish',
+      BASE,
+      '--live',
+    ],
     { cwd: REPO, stdio: 'ignore' },
   );
 }
 
+/**
+ * Waits for a live match the caller has not seen before.
+ *
+ * Each block here starts its own match, and a previous block's CLI can still be
+ * shutting down — so "the first live match" is not necessarily the one this
+ * block just started.
+ */
+const seenMatchIds = new Set();
 async function waitForLive() {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 80; i++) {
     await new Promise((r) => setTimeout(r, 200));
     const live = await (await fetch(BASE + '/api/live')).json();
-    if (live.length > 0) return live[0];
+    const fresh = live.find((m) => !seenMatchIds.has(m.id));
+    if (fresh) {
+      seenMatchIds.add(fresh.id);
+      return fresh;
+    }
   }
   return null;
 }
@@ -90,6 +111,28 @@ try {
     }
     cli.kill();
     await browser.close();
+  }
+
+  /* ---- a producer that dies mid-match still leaves something watchable ---- */
+  {
+    const cli = runLiveMatch('live-interrupted');
+    const match = await waitForLive();
+    // Kill it early enough that the match is genuinely unfinished.
+    await new Promise((r) => setTimeout(r, 900));
+    cli.kill('SIGKILL');
+    await new Promise((r) => setTimeout(r, 1500));
+    if (match) {
+      const res = await fetch(`${BASE}/api/replays/${match.id}`);
+      check('an interrupted match is stored rather than lost', res.ok, `HTTP ${res.status}`);
+      if (res.ok) {
+        const replay = await res.json();
+        check(
+          'and is marked partial with real turns',
+          replay.partial === true && replay.turns.length > 0,
+          `${replay.turns.length} turns`,
+        );
+      }
+    }
   }
 
   /* ---- a link opened after the match ends falls back to the recording ---- */

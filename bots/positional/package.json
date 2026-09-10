@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "main": "./dist/src/main.js",
-  "dependencies": { "@spark/protocol": "*", "@spark/sdk": "*" },
-  "scripts": { "build": "tsc -b" }
+  "dependencies": {
+    "@spark/protocol": "*",
+    "@spark/sdk": "*"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
 }

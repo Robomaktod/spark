@@ -247,7 +247,8 @@ export class ArenaRenderer {
     // is a freshly generated world and a seek restores one wholesale, so
     // anything that is not the next turn in sequence needs a full repaint —
     // otherwise the terrain never appears at all.
-    const sequential = frame.index === this.paintedIndex + 1 && this.paintedRound === frame.round.round;
+    const sequential =
+      frame.index === this.paintedIndex + 1 && this.paintedRound === frame.round.round;
     if (repaintAll || changed || !sequential) {
       const blocks = repaintAll || !sequential ? null : frame.dirtyBlocks;
       this.paintedRound = frame.round.round;
@@ -289,7 +290,15 @@ export class ArenaRenderer {
     }
   }
 
-  private put(layer: Layer, x: number, y: number, r: number, g: number, b: number, a: number): void {
+  private put(
+    layer: Layer,
+    x: number,
+    y: number,
+    r: number,
+    g: number,
+    b: number,
+    a: number,
+  ): void {
     const o = (y * this.width + x) * 4;
     const data = layer.image.data;
     data[o] = r;
@@ -484,7 +493,11 @@ export class ArenaRenderer {
         g.rect(x, y, 1, 1).fill({ color: colour, alpha: o.concentrated ? 0.85 : 0.6 });
       }
       if (o.concentrated) {
-        g.circle(o.cellX + 0.5, o.cellY + 0.5, 2.4).stroke({ color: colour, width: 0.22, alpha: 0.75 });
+        g.circle(o.cellX + 0.5, o.cellY + 0.5, 2.4).stroke({
+          color: colour,
+          width: 0.22,
+          alpha: 0.75,
+        });
       }
     }
   }
@@ -499,7 +512,11 @@ export class ArenaRenderer {
       const colour = hexRGB(SIDE_RGB[side]);
       const r = rules.wizard.footprintRadius;
       g.rect(w.x - r, w.y - r, r * 2 + 1, r * 2 + 1).fill({ color: colour, alpha: 0.28 });
-      g.rect(w.x - r, w.y - r, r * 2 + 1, r * 2 + 1).stroke({ color: colour, width: 0.3, alpha: 1 });
+      g.rect(w.x - r, w.y - r, r * 2 + 1, r * 2 + 1).stroke({
+        color: colour,
+        width: 0.3,
+        alpha: 1,
+      });
       const wand = w.wandCell();
       g.moveTo(w.x + 0.5, w.y + 0.5)
         .lineTo(wand[0] + 0.5, wand[1] + 0.5)

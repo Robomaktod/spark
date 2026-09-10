@@ -130,7 +130,12 @@ export function renderPanel(round: Round, names: Readonly<Record<Side, string>>)
     const held = round.objects
       .filter((o) => !o.destroyed && o.concentrated && o.owner === side)
       .map((o) => {
-        const upkeep = concentrationUpkeepMilliMana(o.massG, o.material, o.temperatureMilliC, rules);
+        const upkeep = concentrationUpkeepMilliMana(
+          o.massG,
+          o.material,
+          o.temperatureMilliC,
+          rules,
+        );
         return '#' + o.id + '@' + (upkeep / 1000).toFixed(1);
       });
     lines.push(

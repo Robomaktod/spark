@@ -17,7 +17,10 @@ const port = Number(process.env.PARITY_PORT ?? 4178);
 // Run a match if one was not handed over, so the check stands alone.
 const replayPath =
   process.argv[2] ??
-  (await runMatchToFile('parity', join(mkdtempSync(join(tmpdir(), 'spark-parity-')), 'match.json')));
+  (await runMatchToFile(
+    'parity',
+    join(mkdtempSync(join(tmpdir(), 'spark-parity-')), 'match.json'),
+  ));
 const replay = JSON.parse(readFileSync(resolve(replayPath), 'utf8'));
 
 console.log(`comparing ${replay.turns.length} turns of ${replayPath}`);

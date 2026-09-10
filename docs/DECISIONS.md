@@ -20,7 +20,7 @@ turn, after both the acting wizard's actions".
 
 **Chosen:** `turn` counts cycles, 1 to 30. Each cycle gives every wizard one
 turn, and the physics step runs after each of those — twice per cycle. So a
-round is up to 30 turns *each*, and a projectile travels during the opponent's
+round is up to 30 turns _each_, and a projectile travels during the opponent's
 turn as §12 requires.
 
 **Why:** the alternative reading (30 wizard-turns, 15 each) cannot satisfy §18:
@@ -62,7 +62,7 @@ out at 26.44 mana against the passport's ≈26, and the fireball at 61.34 agains
 ## D4 — `addTemperature` buys a packet of energy, and the body carries it
 
 **Passport:** §7.3 lists `addTemperature` as "heat or cool cells in the impact
-shape". §10's worked example has an ice knife *at* −200 °C, decaying 30% of its
+shape". §10's worked example has an ice knife _at_ −200 °C, decaying 30% of its
 differential per turn. §14.3's example turn packet shows an object at −200 °C.
 
 **Chosen:** an `addTemperature` op buys thermal energy sized by the nominal cell
@@ -72,7 +72,7 @@ packet into the cells actually struck, each warming according to its own heat
 capacity. Energy is conserved end to end: one purchase, one packet.
 
 The declared value is therefore the temperature swing that packet would produce
-in *nominal* matter, not the swing the body itself reaches. `declaredTemperatureFor()`
+in _nominal_ matter, not the swing the body itself reaches. `declaredTemperatureFor()`
 in the SDK converts between the two.
 
 **Why:** three things had to hold at once, and this is the only arrangement that
@@ -90,7 +90,7 @@ The rejected alternative — declared ΔT applied directly to the body, priced o
 the body's own mass — breaks (1) by pricing the ice knife at 40 mana. The other
 alternative — declared ΔT applied to the body but priced on impact area — breaks
 (3): buying −200 °C would cost 0.52 mana while holding it costs 7.13 a turn, so
-holding would be fourteen times *more* expensive than recasting.
+holding would be fourteen times _more_ expensive than recasting.
 
 A consequence worth knowing: heat delivered into heavy matter barely moves it. A
 knife that dumps 57 J into a 2.5 kg stone cell warms it about 40 °C. Melting
@@ -122,7 +122,7 @@ step in that window. It fires at most once. The reservation is released at
 expiry, and any part of it the cast did not spend is returned immediately.
 
 **Why:** both `objectEnteredRadius` and `opponentCast` describe things that
-happen on the *opponent's* turn. Under the narrow reading — armed only during
+happen on the _opponent's_ turn. Under the narrow reading — armed only during
 the declarer's own turn — neither trigger could ever fire, and the React slot
 would do nothing.
 
@@ -165,7 +165,7 @@ launch direction.
 
 **Chosen:** a shape is defined as a continuous region in its local frame, and
 rasterised by rotating each candidate world cell back into that frame. Cost and
-the damage coverage denominator use the shape's cell count in its *canonical*
+the damage coverage denominator use the shape's cell count in its _canonical_
 orientation, not the rasterised one.
 
 **Why:** rotating an already-rasterised shape collapses it — a diagonal 5-cell
@@ -215,7 +215,7 @@ whole-cell positions would not.
 
 **Web plan:** §10.3 asks for full world-state snapshots every 5 turns.
 
-**Chosen:** a keyframe stores the cells that differ from the round's *generated*
+**Chosen:** a keyframe stores the cells that differ from the round's _generated_
 terrain, which is reproducible from the seed. Restoring rebuilds the generated
 world and applies the diff.
 
@@ -243,7 +243,7 @@ that would look exactly like a nondeterministic engine.
 struck wizard's footprint, and the kinetic energy carried in.
 
 **Why:** the coverage overlay is the highest-value one in the plan (§5.2),
-because `overlapCells / impactShapeCells` *is* the damage multiplier, and a
+because `overlapCells / impactShapeCells` _is_ the damage multiplier, and a
 player who cannot see it cannot tell a graze from a miss. Recomputing the shape
 in the viewer would mean a second implementation of the rasteriser — the exact
 kind of duplication that guarantees the two disagree eventually.
@@ -295,3 +295,42 @@ it is instant. Chromium re-simulates a complete four-round, 170-turn match in
 about 1.5 s — roughly 9 ms per turn, so a viewer joining at the last turn of a
 single round waits around 300 ms. Well inside the plan's one-second target for a
 round, and worth knowing before anyone tries this with a longer match format.
+
+---
+
+# Tooling
+
+## D19 — Invariants are enforced by a script, not only by prose
+
+**Chosen:** `scripts/check-invariants.mjs` fails the build on floating point in
+the simulation packages, I/O or framework imports in the engine, and a package
+depending on something it may not. `npm run verify` runs it first.
+
+**Why:** the four rules it checks are the ones that break the _game_ rather
+than the code review, and none of them are expressible in the type system. A
+contributor — human or otherwise — who reads `docs/CODING-RULES.md` will follow
+them; one who skips the docs needs to be stopped anyway. Prose alone had already
+let a `Math.hypot` into a bot and a decimal into a viewer helper; those are
+harmless where they are, and the point is that nothing distinguished them from
+the same code inside `pricing.ts` except a reader's attention.
+
+The escape hatch is `// invariant-ok(<rule>): <reason>` with a mandatory reason.
+Three exist: the Newton seed in `isqrt`, the display formatting in
+`describeEvent`, and the `finishedAt` timestamp on a partial replay. Each is
+presentation or metadata, never simulation input.
+
+## D20 — An interrupted live match is stored, not discarded
+
+**Chosen:** when a live producer disconnects without an `end` frame, the relay
+stores the turns it did send, marked `partial: true`. The viewer says the match
+was cut short and shows them.
+
+**Why:** the previous behaviour deleted the match and left nothing on disk, so
+a link to it returned 404 — which is what a user hit. The turns played are real
+and reproduce exactly; there is simply no result and there are no keyframes, so
+seeking backwards replays from the start of the round. A partial match is worth
+watching, and a 404 tells its holder nothing about why.
+
+The viewer now also distinguishes "no match here" from a transport failure,
+because the former is the ordinary case after a relay restart and should not
+read like a crash.

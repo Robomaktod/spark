@@ -84,7 +84,8 @@ function resolveDirection(
     return { ok: true, value: spec };
   }
   const raw = args[spec.param];
-  if (raw === undefined) return { ok: false, reason: `launch.direction: missing argument "${spec.param}"` };
+  if (raw === undefined)
+    return { ok: false, reason: `launch.direction: missing argument "${spec.param}"` };
   if (
     !Array.isArray(raw) ||
     raw.length !== 2 ||

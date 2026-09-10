@@ -11,9 +11,22 @@ import type { Side } from '@spark/protocol';
 export type Vec = readonly [number, number];
 
 export type EngineEvent =
-  | { readonly t: 'round_start'; readonly round: number; readonly game: number; readonly firstMover: Side }
+  | {
+      readonly t: 'round_start';
+      readonly round: number;
+      readonly game: number;
+      readonly firstMover: Side;
+    }
   | { readonly t: 'turn_start'; readonly side: Side; readonly turn: number }
-  | { readonly t: 'move'; readonly side: Side; readonly from: Vec; readonly to: Vec; readonly facing: number; readonly mp: number; readonly note?: string }
+  | {
+      readonly t: 'move';
+      readonly side: Side;
+      readonly from: Vec;
+      readonly to: Vec;
+      readonly facing: number;
+      readonly mp: number;
+      readonly note?: string;
+    }
   | {
       readonly t: 'cast';
       readonly side: Side;
@@ -35,8 +48,19 @@ export type EngineEvent =
       readonly massG: number;
       readonly concentrate: boolean;
     }
-  | { readonly t: 'cast_failed'; readonly side: Side; readonly spellId: string; readonly reason: string }
-  | { readonly t: 'channel'; readonly side: Side; readonly objectId: number; readonly kind: string; readonly costMilli: number }
+  | {
+      readonly t: 'cast_failed';
+      readonly side: Side;
+      readonly spellId: string;
+      readonly reason: string;
+    }
+  | {
+      readonly t: 'channel';
+      readonly side: Side;
+      readonly objectId: number;
+      readonly kind: string;
+      readonly costMilli: number;
+    }
   | {
       readonly t: 'impact_wizard';
       readonly objectId: number;
@@ -56,25 +80,85 @@ export type EngineEvent =
       /** The struck wizard's footprint at the moment of impact. */
       readonly footprint: readonly Vec[];
     }
-  | { readonly t: 'impact_cell'; readonly objectId: number; readonly at: Vec; readonly penetrated: boolean; readonly keMilliJ: number }
-  | { readonly t: 'objects_collided'; readonly a: number; readonly b: number; readonly at: Vec; readonly keMilliJ: number }
+  | {
+      readonly t: 'impact_cell';
+      readonly objectId: number;
+      readonly at: Vec;
+      readonly penetrated: boolean;
+      readonly keMilliJ: number;
+    }
+  | {
+      readonly t: 'objects_collided';
+      readonly a: number;
+      readonly b: number;
+      readonly at: Vec;
+      readonly keMilliJ: number;
+    }
   | { readonly t: 'settled'; readonly objectId: number; readonly at: Vec }
-  | { readonly t: 'burn'; readonly side: Side; readonly damageMilli: number; readonly hottestMilliC: number }
-  | { readonly t: 'push'; readonly side: Side; readonly cells: number; readonly hitWall: boolean; readonly damageMilli: number }
-  | { readonly t: 'react_declared'; readonly side: Side; readonly trigger: string; readonly spellId: string; readonly reservedMilli: number }
-  | { readonly t: 'react_fired'; readonly side: Side; readonly trigger: string; readonly spellId: string; readonly costMilli: number }
-  | { readonly t: 'react_refund'; readonly side: Side; readonly refundMilli: number; readonly fired: boolean }
+  | {
+      readonly t: 'burn';
+      readonly side: Side;
+      readonly damageMilli: number;
+      readonly hottestMilliC: number;
+    }
+  | {
+      readonly t: 'push';
+      readonly side: Side;
+      readonly cells: number;
+      readonly hitWall: boolean;
+      readonly damageMilli: number;
+    }
+  | {
+      readonly t: 'react_declared';
+      readonly side: Side;
+      readonly trigger: string;
+      readonly spellId: string;
+      readonly reservedMilli: number;
+    }
+  | {
+      readonly t: 'react_fired';
+      readonly side: Side;
+      readonly trigger: string;
+      readonly spellId: string;
+      readonly costMilli: number;
+    }
+  | {
+      readonly t: 'react_refund';
+      readonly side: Side;
+      readonly refundMilli: number;
+      readonly fired: boolean;
+    }
   | { readonly t: 'concentration_start'; readonly side: Side; readonly objectId: number }
-  | { readonly t: 'concentration_upkeep'; readonly side: Side; readonly objectId: number; readonly upkeepMilli: number }
-  | { readonly t: 'concentration_released'; readonly side: Side; readonly objectId: number; readonly reason: string }
+  | {
+      readonly t: 'concentration_upkeep';
+      readonly side: Side;
+      readonly objectId: number;
+      readonly upkeepMilli: number;
+    }
+  | {
+      readonly t: 'concentration_released';
+      readonly side: Side;
+      readonly objectId: number;
+      readonly reason: string;
+    }
   | { readonly t: 'phase_change'; readonly at: Vec; readonly from: string; readonly to: string }
   | { readonly t: 'regen'; readonly side: Side; readonly amountMilli: number }
   | { readonly t: 'death'; readonly side: Side }
   | { readonly t: 'rejected'; readonly side: Side; readonly detail: string }
   | { readonly t: 'timeout'; readonly side: Side }
-  | { readonly t: 'round_end'; readonly round: number; readonly winner: Side | null; readonly reason: string };
+  | {
+      readonly t: 'round_end';
+      readonly round: number;
+      readonly winner: Side | null;
+      readonly reason: string;
+    };
 
+// These three format numbers for a human to read. They are presentation, not
+// simulation: describeEvent is a pure function of an event that has already
+// happened, and nothing it returns is fed back into the engine.
+// invariant-ok(determinism): display formatting, never read back by the engine
 const hp = (milli: number): string => (milli / 1000).toFixed(1);
+// invariant-ok(determinism): display formatting, never read back by the engine
 const mana = (milli: number): string => (milli / 1000).toFixed(1);
 const pos = (p: Vec): string => `[${p[0]},${p[1]}]`;
 

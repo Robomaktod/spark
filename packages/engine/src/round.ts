@@ -25,7 +25,7 @@ import { MATERIALS } from '@spark/protocol';
 import type { Spellbook } from './spellbook.js';
 import type { EngineEvent, Vec } from './events.js';
 import { describeEvent, isPublicEvent } from './events.js';
-import { World } from './world.js';
+import type { World } from './world.js';
 import { Wizard } from './wizard.js';
 import { SparkObject, type ResolvedOp } from './objects.js';
 import { manifestBlocked, planCast } from './cast.js';
@@ -147,7 +147,12 @@ export class Round {
     });
     this.state = { A: mkState(), B: mkState() };
 
-    this.events.push({ t: 'round_start', round: this.round, game: this.game, firstMover: config.firstMover });
+    this.events.push({
+      t: 'round_start',
+      round: this.round,
+      game: this.game,
+      firstMover: config.firstMover,
+    });
     this.world.drainChanged();
     this.initialTerrain = this.world.snapshotSparse();
   }
@@ -201,30 +206,28 @@ export class Round {
       reason: this.reason,
       cells: this.world.diffFromSparse(this.initialTerrain),
       wizards: { A: wizardSnapshot('A'), B: wizardSnapshot('B') },
-      objects: this.objects.map(
-        (o): ObjectSnapshot => ({
-          id: o.id,
-          owner: o.owner,
-          spellId: o.spellId,
-          xMilli: o.xMilli,
-          yMilli: o.yMilli,
-          vxMilli: o.vxMilli,
-          vyMilli: o.vyMilli,
-          massG: o.massG,
-          material: o.material,
-          temperatureMilliC: o.temperatureMilliC,
-          concentrated: o.concentrated,
-          settled: o.settled,
-          cells: o.cells.map(([x, y]) => [x, y] as const),
-          impact: o.impact
-            ? {
-                cells: o.impact.cells.map(([x, y]) => [x, y] as const),
-                canonicalCellCount: o.impact.canonicalCellCount,
-                ops: o.impact.ops.map((op) => ({ op: op.op, value: op.value })),
-              }
-            : null,
-        }),
-      ),
+      objects: this.objects.map((o): ObjectSnapshot => ({
+        id: o.id,
+        owner: o.owner,
+        spellId: o.spellId,
+        xMilli: o.xMilli,
+        yMilli: o.yMilli,
+        vxMilli: o.vxMilli,
+        vyMilli: o.vyMilli,
+        massG: o.massG,
+        material: o.material,
+        temperatureMilliC: o.temperatureMilliC,
+        concentrated: o.concentrated,
+        settled: o.settled,
+        cells: o.cells.map(([x, y]) => [x, y] as const),
+        impact: o.impact
+          ? {
+              cells: o.impact.cells.map(([x, y]) => [x, y] as const),
+              canonicalCellCount: o.impact.canonicalCellCount,
+              ops: o.impact.ops.map((op) => ({ op: op.op, value: op.value })),
+            }
+          : null,
+      })),
       sides: { A: sideSnapshot('A'), B: sideSnapshot('B') },
       eventCount: this.events.length,
     };
@@ -339,10 +342,7 @@ export class Round {
       .map((i) => this.world.viewOfIndex(i));
     st.pendingCells.clear();
 
-    const eventLines = this.events
-      .slice(st.eventCursor)
-      .filter(isPublicEvent)
-      .map(describeEvent);
+    const eventLines = this.events.slice(st.eventCursor).filter(isPublicEvent).map(describeEvent);
     st.eventCursor = this.events.length;
 
     const msg: TurnMessage = {
@@ -370,7 +370,12 @@ export class Round {
       if (!obj || obj.destroyed) continue;
       out.push({
         objectId: id,
-        upkeep: concentrationUpkeepMilliMana(obj.massG, obj.material, obj.temperatureMilliC, this.rules),
+        upkeep: concentrationUpkeepMilliMana(
+          obj.massG,
+          obj.material,
+          obj.temperatureMilliC,
+          this.rules,
+        ),
       });
     }
     return out;
@@ -439,7 +444,12 @@ export class Round {
     if (actions.move1) this.applyMoveSlot(side, actions.move1);
 
     if (actions.cast) {
-      st.lastCastResult = this.applyCast(side, actions.cast.spellId, actions.cast.args ?? {}, actions.cast.concentrate === true);
+      st.lastCastResult = this.applyCast(
+        side,
+        actions.cast.spellId,
+        actions.cast.args ?? {},
+        actions.cast.concentrate === true,
+      );
     } else if (actions.channel) {
       st.lastCastResult = this.applyChannel(side, actions.channel);
     }
@@ -488,7 +498,11 @@ export class Round {
 
     if (manifestBlocked(this.world, plan, this.rules)) {
       // Passport §4: mana is fully refunded, the Cast slot is still consumed.
-      this.fail(side, spellId, `manifest area at [${plan.manifest[0]},${plan.manifest[1]}] is blocked`);
+      this.fail(
+        side,
+        spellId,
+        `manifest area at [${plan.manifest[0]},${plan.manifest[1]}] is blocked`,
+      );
       return 'blocked';
     }
 
@@ -572,7 +586,12 @@ export class Round {
 
     if (cmd.kind === 'addTemperature') {
       const spec = MATERIALS[obj.material];
-      const cost = heatCostMilliMana(obj.massG, spec.specificHeatMilli, cmd.value * 1000, this.rules);
+      const cost = heatCostMilliMana(
+        obj.massG,
+        spec.specificHeatMilli,
+        cmd.value * 1000,
+        this.rules,
+      );
       if (cost > wizard.spendableMilli) {
         this.state[side].rejected.push(
           `channel addTemperature costs ${(cost / 1000).toFixed(2)} mana, ${(wizard.spendableMilli / 1000).toFixed(2)} available`,
@@ -581,7 +600,13 @@ export class Round {
       }
       wizard.spendMana(cost);
       obj.temperatureMilliC += cmd.value * 1000;
-      this.events.push({ t: 'channel', side, objectId: obj.id, kind: 'addTemperature', costMilli: cost });
+      this.events.push({
+        t: 'channel',
+        side,
+        objectId: obj.id,
+        kind: 'addTemperature',
+        costMilli: cost,
+      });
       return 'ok';
     }
 
@@ -693,12 +718,16 @@ export class Round {
     const wizard = this.wizards[side];
     switch (trigger.kind) {
       case 'opponentCast':
-        return this.state[side].opponentCastSinceDeclare ? { pos: [this.wizards[other(side)].x, this.wizards[other(side)].y] } : null;
+        return this.state[side].opponentCastSinceDeclare
+          ? { pos: [this.wizards[other(side)].x, this.wizards[other(side)].y] }
+          : null;
       case 'selfHpBelow':
         return wizard.hpMilli < trigger.x * 1000 ? { pos: [wizard.x, wizard.y] } : null;
       case 'opponentWithinRadius': {
         const opp = this.wizards[other(side)];
-        return ilen(opp.x - wizard.x, opp.y - wizard.y) <= trigger.r ? { pos: [opp.x, opp.y] } : null;
+        return ilen(opp.x - wizard.x, opp.y - wizard.y) <= trigger.r
+          ? { pos: [opp.x, opp.y] }
+          : null;
       }
       case 'objectEnteredRadius': {
         for (const o of this.objects) {
@@ -721,7 +750,8 @@ export class Round {
               : trigger.prop === 'height'
                 ? this.world.heightMm[i]!
                 : this.world.mass[i]!;
-        const crossed = trigger.dir === 'above' ? value > trigger.threshold : value < trigger.threshold;
+        const crossed =
+          trigger.dir === 'above' ? value > trigger.threshold : value < trigger.threshold;
         return crossed ? { pos: [x, y] } : null;
       }
     }
@@ -732,7 +762,11 @@ export class Round {
    * a `$triggerPos` in a direction slot becomes the aim vector from the wand to
    * the trigger point (passport §11).
    */
-  private fireReaction(side: Side, armed: ArmedReaction, hit: { pos: Vec; objectId?: number }): void {
+  private fireReaction(
+    side: Side,
+    armed: ArmedReaction,
+    hit: { pos: Vec; objectId?: number },
+  ): void {
     const wizard = this.wizards[side];
     const wand = wizard.wandCell();
     const resolved: Record<string, number | Vec2> = {};
@@ -756,7 +790,12 @@ export class Round {
     // The reservation is released so the cast can draw on it, then whatever the
     // cast did not use stays with the wizard.
     wizard.reservedMilli = Math.max(0, wizard.reservedMilli - armed.reservedMilli);
-    const result = this.applyCast(side, armed.declaration.spellId, resolved, armed.declaration.concentrate === true);
+    const result = this.applyCast(
+      side,
+      armed.declaration.spellId,
+      resolved,
+      armed.declaration.concentrate === true,
+    );
     const spent = before - wizard.manaMilli;
     if (result === 'ok') {
       this.events.push({
@@ -768,7 +807,12 @@ export class Round {
       });
     }
     if (spent < armed.reservedMilli) {
-      this.events.push({ t: 'react_refund', side, refundMilli: armed.reservedMilli - spent, fired: true });
+      this.events.push({
+        t: 'react_refund',
+        side,
+        refundMilli: armed.reservedMilli - spent,
+        fired: true,
+      });
     }
   }
 
@@ -831,7 +875,12 @@ export class Round {
         this.releaseConcentration(side, id, 'object no longer exists');
         continue;
       }
-      const upkeep = concentrationUpkeepMilliMana(obj.massG, obj.material, obj.temperatureMilliC, this.rules);
+      const upkeep = concentrationUpkeepMilliMana(
+        obj.massG,
+        obj.material,
+        obj.temperatureMilliC,
+        this.rules,
+      );
       if (upkeep > wizard.manaMilli) {
         this.releaseConcentration(side, id, 'mana shortfall');
         continue;
@@ -843,7 +892,10 @@ export class Round {
     }
 
     const before = wizard.manaMilli;
-    wizard.manaMilli = Math.min(this.rules.wizard.manaCapMilli, wizard.manaMilli + this.rules.wizard.manaRegenMilli);
+    wizard.manaMilli = Math.min(
+      this.rules.wizard.manaCapMilli,
+      wizard.manaMilli + this.rules.wizard.manaRegenMilli,
+    );
     const gained = wizard.manaMilli - before;
     if (gained > 0) this.events.push({ t: 'regen', side, amountMilli: gained });
   }
@@ -862,7 +914,12 @@ export class Round {
       this.finished = true;
       this.reason = aDead && bDead ? 'double_ko' : 'hp';
       this.winner = aDead && bDead ? null : aDead ? 'B' : 'A';
-      this.events.push({ t: 'round_end', round: this.round, winner: this.winner, reason: this.reason });
+      this.events.push({
+        t: 'round_end',
+        round: this.round,
+        winner: this.winner,
+        reason: this.reason,
+      });
     }
   }
 

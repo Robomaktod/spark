@@ -23,8 +23,6 @@ const EMPTY_RESULT: MatchResult = {
   rounds: [],
 };
 
-
-
 interface Args {
   readonly command: string;
   readonly positional: readonly string[];
@@ -225,7 +223,7 @@ async function cmdVerify(args: Args): Promise<number> {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  let code = 0;
+  let code: number;
   switch (args.command) {
     case 'run':
       code = await cmdRun(args);

@@ -62,7 +62,10 @@ export function unitVectorMicro(dx: number, dy: number): readonly [number, numbe
   const [rx, ry] = reduceDirection(dx, dy);
   const lenMicro = Number(isqrtBig(BigInt(rx * rx + ry * ry) * 1_000_000_000_000n));
   if (lenMicro === 0) return [0, 0];
-  return [mulDivRound(rx, 1_000_000_000_000, lenMicro), mulDivRound(ry, 1_000_000_000_000, lenMicro)];
+  return [
+    mulDivRound(rx, 1_000_000_000_000, lenMicro),
+    mulDivRound(ry, 1_000_000_000_000, lenMicro),
+  ];
 }
 
 /** Scales a direction down so its components fit in +/-10000, keeping the angle. */

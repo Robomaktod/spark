@@ -12,7 +12,12 @@
 import type { Side, SpellTemplate, Rules } from '@spark/protocol';
 import { Round, Spellbook, generateMap, roundLayout, spawnsForRound } from '@spark/engine';
 import type { EngineEvent, ObjectPath } from '@spark/engine';
-import { KEYFRAME_INTERVAL, type ReplayFile, type ReplayKeyframe, type ReplayTurn } from './format.js';
+import {
+  KEYFRAME_INTERVAL,
+  type ReplayFile,
+  type ReplayKeyframe,
+  type ReplayTurn,
+} from './format.js';
 
 /** Everything the viewer needs about one reconstructed turn. */
 export interface Frame {
@@ -33,7 +38,9 @@ export class ReplayMismatch extends Error {
     readonly expected: string,
     readonly actual: string,
   ) {
-    super(`replay diverged at turn ${turnIndex}: recorded hash ${expected}, reconstructed ${actual}`);
+    super(
+      `replay diverged at turn ${turnIndex}: recorded hash ${expected}, reconstructed ${actual}`,
+    );
   }
 }
 
@@ -219,11 +226,20 @@ export function shouldKeyframe(turnsInRound: number): boolean {
 export function arenaFor(
   replay: ReplayFile,
   roundNumber: number,
-): { world: ReturnType<typeof generateMap>['world']; spawns: readonly [[number, number], [number, number]] } {
+): {
+  world: ReturnType<typeof generateMap>['world'];
+  spawns: readonly [[number, number], [number, number]];
+} {
   const layout = roundLayout(replay.rules, roundNumber);
   const map = generateMap(replay.seed, replay.rules);
   const spawns = spawnsForRound(map.spawns, layout);
-  return { world: map.world, spawns: [[spawns[0][0], spawns[0][1]], [spawns[1][0], spawns[1][1]]] };
+  return {
+    world: map.world,
+    spawns: [
+      [spawns[0][0], spawns[0][1]],
+      [spawns[1][0], spawns[1][1]],
+    ],
+  };
 }
 
 export interface FlatEvent {

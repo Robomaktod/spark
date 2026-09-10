@@ -172,7 +172,12 @@ export interface CastAction {
 }
 
 export type ChannelCommand =
-  | { readonly kind: 'impulse'; readonly objectId: number; readonly dir: Vec2; readonly speed: number }
+  | {
+      readonly kind: 'impulse';
+      readonly objectId: number;
+      readonly dir: Vec2;
+      readonly speed: number;
+    }
   | { readonly kind: 'addTemperature'; readonly objectId: number; readonly value: number }
   | { readonly kind: 'release'; readonly objectId: number };
 

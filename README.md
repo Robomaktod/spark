@@ -5,8 +5,8 @@ wizard, and author the **spells** that wizard can cast. Neither player touches
 the game during a match — all skill expression lives in the code.
 
 The distinguishing idea: spells are not a fixed list of effects. A spell is a
-small declarative structure describing *matter to manifest and what it does on
-impact*, and the engine prices it in mana according to physics. A fireball and an
+small declarative structure describing _matter to manifest and what it does on
+impact_, and the engine prices it in mana according to physics. A fireball and an
 ice knife are the same two operations with different materials, shapes and
 velocities.
 
@@ -20,7 +20,7 @@ recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).
 ```bash
 npm install
 npm run build
-npm test
+npm run verify
 
 # Run a match between the two example bots and record a replay
 node apps/cli/dist/src/main.js run --seed spark --replay replays/demo.json
@@ -33,6 +33,10 @@ node apps/cli/dist/src/main.js verify replays/demo.json
 ```
 
 `npm run demo` does the run-and-watch in one step.
+
+`npm run verify` is the gate: invariants, typecheck, lint, formatting, unit
+tests, and a real four-round match proving determinism. `npm run test:web` adds
+the browser half, which needs Chromium.
 
 For the web viewer, start the relay and publish a match to it:
 
@@ -79,16 +83,26 @@ import { runBot, declaredTemperatureFor, shapeCellCount } from '@spark/sdk';
 
 runBot({
   // Registered before the map is revealed, and locked for the whole match.
-  spellbook: () => [{
-    id: 'knife',
-    body: { shape: 'line', length: 8, material: 'ice', mass: { param: 'm', min: 500, max: 8000 } },
-    launch: { direction: { param: 'dir', type: 'vec2' }, speed: { param: 'v', min: 0, max: 60 } },
-    onImpact: {
-      shape: 'disc', radius: 2,
-      ops: [{ op: 'transferKinetic' },
-            { op: 'addTemperature', value: { param: 'chill', min: -8000, max: 0 } }],
+  spellbook: () => [
+    {
+      id: 'knife',
+      body: {
+        shape: 'line',
+        length: 8,
+        material: 'ice',
+        mass: { param: 'm', min: 500, max: 8000 },
+      },
+      launch: { direction: { param: 'dir', type: 'vec2' }, speed: { param: 'v', min: 0, max: 60 } },
+      onImpact: {
+        shape: 'disc',
+        radius: 2,
+        ops: [
+          { op: 'transferKinetic' },
+          { op: 'addTemperature', value: { param: 'chill', min: -8000, max: 0 } },
+        ],
+      },
     },
-  }],
+  ],
 
   turn(msg, ctx) {
     const dir = [msg.opponent.pos[0] - msg.you.pos[0], msg.opponent.pos[1] - msg.you.pos[1]];
@@ -126,7 +140,7 @@ between "I lost" and "I know which line of my code was wrong".
 
 - **Match viewer** — overlay rail, arena, ledger, scrubber. Six overlays: heat,
   height, trails, coverage, mana field, grid. Coverage is the one that matters
-  most, because `overlapCells / impactShapeCells` *is* the damage multiplier.
+  most, because `overlapCells / impactShapeCells` _is_ the damage multiplier.
 - **Ledger** — opening mana, upkeep per concentration, cast cost split into
   manifest / impulse / heat / binding, regen, closing. Every number matches a
   formula in passport §9, so a player can check the engine's arithmetic against
@@ -172,6 +186,36 @@ your machine                          server                    browsers
 └──────────────┘                     └──────────┘
 ```
 
+## Working on it
+
+[`AGENTS.md`](AGENTS.md) is the house rules — written for AI coding agents, but
+it is the same rules a person needs. The short version:
+
+| command                 | what it proves                                                          |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `npm run verify`        | invariants, types, lint, format, tests, determinism                     |
+| `npm run test:web`      | the browser engine matches the Node engine, turn for turn               |
+| `npm run invariants`    | no floats in the simulation, no I/O in the engine, no upward dependency |
+| `npm run verify:replay` | a real match reproduces, and keyframe seeks agree with it               |
+
+`scripts/check-invariants.mjs` enforces the four rules that break the _game_
+rather than the code review, because none of them are expressible in the type
+system:
+
+- **no floating point** in `protocol`, `engine` or `replay` — fractions are
+  scaled integers, one unit is 1/1000
+- **no I/O and no framework** in the engine, which is what lets it ship to the
+  browser unchanged
+- **packages depend only downward**, checked from their declared dependencies
+- **`protocol` has no dependencies at all**
+
+A rule can be waived on its line with `// invariant-ok(<rule>): <reason>`. There
+are three waivers in the repository and each one says why.
+
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) has the dependency map and the
+extension points — how to add a spell op, a shape, a trigger predicate, an
+overlay, or a tuning constant.
+
 ## Layout
 
 ```
@@ -188,6 +232,9 @@ apps/
 bots/
   naive/          Fires every turn, never moves
   positional/     Uses cover, leads the target, intercepts
+scripts/
+  check-invariants.mjs   The four rules that break the game if broken
+  verify-replay.mjs      Runs a real match and proves it reproduces
 ```
 
 The engine has no framework dependency and does no I/O, per passport §17. `Round`
@@ -219,20 +266,20 @@ code — but that is a claim, and this is the check.
 
 ## Status against the passport's milestones
 
-| Milestone | Gate | State |
-|---|---|---|
-| **M1** protocol + engine core | Deterministic: same input → identical state hash across 1000 turns | Done, asserted in `determinism.test.ts` |
-| **M2** spells, pricing, casting | Ice knife and fireball cost within 10% of §9 | Done — 26.44 vs ≈26, 61.34 vs ≈61 |
-| **M3** CLI, sandboxing, replays | Two dummy bots complete a four-round match | Runner and replays done; **sandboxing partial**, see below |
-| **M4** SDKs, ASCII viewer | Someone else writes a working bot | `sdk-ts` and the viewer ship; `sdk-py` not written |
-| **M5** balance pass | Playtest scenarios 1–5 pass | Scenario 3 passes; 1, 2, 4, 5 not run |
-| **M6** map generator, tournaments | Round-robin of 6 bots completes unattended | Map generator done; no tournament runner |
-| **W1** browser engine + `replay` | Browser reconstructs a replay to identical hashes | Done — 170/170 turns match in Chromium |
-| **W2** static viewer | A replay is watchable end to end | Done |
-| **W3** overlays, ledger, event log | Readability test passes | Built; the readability test itself needs a person |
-| **W4** smooth playback | A collision is legible frame by frame | Done — segment stepping in the scrubber |
-| **W5** relay + live mode | A live match watchable with under 1 s lag | Done; catch-up measured at ~9 ms per turn |
-| **W6** workbench | New player builds an attack spell without reading §9 | Built; the new-player test needs a person |
+| Milestone                          | Gate                                                               | State                                                      |
+| ---------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
+| **M1** protocol + engine core      | Deterministic: same input → identical state hash across 1000 turns | Done, asserted in `determinism.test.ts`                    |
+| **M2** spells, pricing, casting    | Ice knife and fireball cost within 10% of §9                       | Done — 26.44 vs ≈26, 61.34 vs ≈61                          |
+| **M3** CLI, sandboxing, replays    | Two dummy bots complete a four-round match                         | Runner and replays done; **sandboxing partial**, see below |
+| **M4** SDKs, ASCII viewer          | Someone else writes a working bot                                  | `sdk-ts` and the viewer ship; `sdk-py` not written         |
+| **M5** balance pass                | Playtest scenarios 1–5 pass                                        | Scenario 3 passes; 1, 2, 4, 5 not run                      |
+| **M6** map generator, tournaments  | Round-robin of 6 bots completes unattended                         | Map generator done; no tournament runner                   |
+| **W1** browser engine + `replay`   | Browser reconstructs a replay to identical hashes                  | Done — 170/170 turns match in Chromium                     |
+| **W2** static viewer               | A replay is watchable end to end                                   | Done                                                       |
+| **W3** overlays, ledger, event log | Readability test passes                                            | Built; the readability test itself needs a person          |
+| **W4** smooth playback             | A collision is legible frame by frame                              | Done — segment stepping in the scrubber                    |
+| **W5** relay + live mode           | A live match watchable with under 1 s lag                          | Done; catch-up measured at ~9 ms per turn                  |
+| **W6** workbench                   | New player builds an attack spell without reading §9               | Built; the new-player test needs a person                  |
 
 Measured so far, against §18's tests:
 

@@ -4,9 +4,7 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": [
-    "src/**/*.ts"
-  ],
+  "include": ["src/**/*.ts"],
   "references": [
     {
       "path": "../../packages/protocol"

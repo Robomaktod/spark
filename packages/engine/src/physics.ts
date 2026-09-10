@@ -31,7 +31,7 @@ import {
 } from './pricing.js';
 import { idivRound } from './fp.js';
 import { pushWizard } from './movement.js';
-import { PathRecorder } from './paths.js';
+import type { PathRecorder } from './paths.js';
 
 export interface PhysicsContext {
   readonly world: World;
@@ -76,7 +76,13 @@ interface Track {
  * kinetic energy it was carrying, which physics deposits whether or not the
  * template bothered to say `transferKinetic`.
  */
-function applyImpact(ctx: PhysicsContext, obj: SparkObject, atX: number, atY: number, energyMilliJ: number): void {
+function applyImpact(
+  ctx: PhysicsContext,
+  obj: SparkObject,
+  atX: number,
+  atY: number,
+  energyMilliJ: number,
+): void {
   const { world } = ctx;
   const cells = obj.impact ? obj.impact.cells : [[0, 0] as const];
   const ops = obj.impact ? obj.impact.ops : [];
@@ -121,7 +127,10 @@ function settleIntoCells(ctx: PhysicsContext, obj: SparkObject): void {
   const spec = MATERIALS[obj.material];
   for (const [x, y] of obj.occupiedCells()) {
     if (!world.inBounds(x, y)) continue;
-    const heightMm = Math.min(3000, idivRound(spec.settledHeightMm * perCell, Math.max(1, spec.densityGPerCell)));
+    const heightMm = Math.min(
+      3000,
+      idivRound(spec.settledHeightMm * perCell, Math.max(1, spec.densityGPerCell)),
+    );
     world.writeCell(x, y, obj.material, {
       massG: perCell,
       milliC: obj.temperatureMilliC,
@@ -186,7 +195,13 @@ export function advanceObjects(ctx: PhysicsContext): void {
         const midX = Math.floor((a.cellX + b.cellX) / 2);
         const midY = Math.floor((a.cellY + b.cellY) / 2);
         const combined = keMilliJ(a.massG, a.speedMilli) + keMilliJ(b.massG, b.speedMilli);
-        events.push({ t: 'objects_collided', a: a.id, b: b.id, at: [midX, midY] as Vec, keMilliJ: combined });
+        events.push({
+          t: 'objects_collided',
+          a: a.id,
+          b: b.id,
+          at: [midX, midY] as Vec,
+          keMilliJ: combined,
+        });
         applyImpact(ctx, a, midX, midY, Math.trunc(combined / 2));
         applyImpact(ctx, b, midX, midY, Math.trunc(combined / 2));
         paths.cut(a.id, a.xMilli, a.yMilli, at(k), 'collision');
@@ -235,9 +250,21 @@ export function advanceObjects(ctx: PhysicsContext): void {
           footprint: w.footprintCells().map(([x, y]) => [x, y] as Vec),
         });
         applyImpact(ctx, o, hx, hy, energy);
-        const push = pushWizard(world, w, idivRound(o.massG * o.vxMilli, 1000), idivRound(o.massG * o.vyMilli, 1000), rules);
+        const push = pushWizard(
+          world,
+          w,
+          idivRound(o.massG * o.vxMilli, 1000),
+          idivRound(o.massG * o.vyMilli, 1000),
+          rules,
+        );
         if (push.cells > 0 || push.hitWall) {
-          events.push({ t: 'push', side: hitSide, cells: push.cells, hitWall: push.hitWall, damageMilli: push.damageMilliHp });
+          events.push({
+            t: 'push',
+            side: hitSide,
+            cells: push.cells,
+            hitWall: push.hitWall,
+            damageMilli: push.damageMilliHp,
+          });
         }
         if (!w.alive) events.push({ t: 'death', side: hitSide });
         paths.cut(o.id, o.xMilli, o.yMilli, at(k), 'wizard');
@@ -252,7 +279,10 @@ export function advanceObjects(ctx: PhysicsContext): void {
         if (!world.inBounds(x, y)) {
           // Passport §3.5: the arena boundary is a hard wall. Objects that
           // reach the edge stop and settle; they never break through.
-          blockedAt = [Math.max(0, Math.min(world.width - 1, x)), Math.max(0, Math.min(world.height - 1, y))];
+          blockedAt = [
+            Math.max(0, Math.min(world.width - 1, x)),
+            Math.max(0, Math.min(world.height - 1, y)),
+          ];
           hitBoundary = true;
           break;
         }
@@ -274,7 +304,13 @@ export function advanceObjects(ctx: PhysicsContext): void {
         world.setBinding(bx, by, 0);
         world.setMaterial(bx, by, 'rubble');
         world.setHeight(bx, by, Math.min(world.heightMm[i]!, MATERIALS.rubble.settledHeightMm));
-        events.push({ t: 'impact_cell', objectId: o.id, at: [bx, by] as Vec, penetrated: true, keMilliJ: energy });
+        events.push({
+          t: 'impact_cell',
+          objectId: o.id,
+          at: [bx, by] as Vec,
+          penetrated: true,
+          keMilliJ: energy,
+        });
         if (before !== 'rubble') {
           events.push({ t: 'phase_change', at: [bx, by] as Vec, from: before, to: 'rubble' });
         }
@@ -295,7 +331,13 @@ export function advanceObjects(ctx: PhysicsContext): void {
           paths.cut(o.id, o.xMilli, o.yMilli, at(k), 'penetrated');
           paths.begin(
             o.id,
-            { objectId: o.id, owner: o.owner, material: o.material, spellId: o.spellId, cells: o.cells },
+            {
+              objectId: o.id,
+              owner: o.owner,
+              material: o.material,
+              spellId: o.spellId,
+              cells: o.cells,
+            },
             o.xMilli,
             o.yMilli,
             at(k),
@@ -307,7 +349,13 @@ export function advanceObjects(ctx: PhysicsContext): void {
         }
       } else {
         // The cell holds: the object stops and dumps its energy into what it struck.
-        events.push({ t: 'impact_cell', objectId: o.id, at: [bx, by] as Vec, penetrated: false, keMilliJ: energy });
+        events.push({
+          t: 'impact_cell',
+          objectId: o.id,
+          at: [bx, by] as Vec,
+          penetrated: false,
+          keMilliJ: energy,
+        });
         applyImpact(ctx, o, bx, by, energy);
         o.vxMilli = 0;
         o.vyMilli = 0;
@@ -328,7 +376,8 @@ export function applyDrag(ctx: PhysicsContext): void {
       o.settled = true;
       continue;
     }
-    const loss = idivRound(speed * rules.physics.dragPermille, 1000) + rules.physics.dragFlatMilliCells;
+    const loss =
+      idivRound(speed * rules.physics.dragPermille, 1000) + rules.physics.dragFlatMilliCells;
     const next = speed - loss;
     if (next < rules.physics.settleSpeedMilliCells) {
       o.vxMilli = 0;
@@ -433,4 +482,3 @@ export function hottestUnderFootMilliC(world: World, wizard: Wizard): number {
   }
   return hottest === -Infinity ? 0 : hottest;
 }
-

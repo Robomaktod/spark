@@ -34,7 +34,8 @@ export class Rng {
 
   /** Uniform integer in [0, bound). Rejection-sampled, so no modulo bias. */
   int(bound: number): number {
-    if (!Number.isSafeInteger(bound) || bound <= 0) throw new Error('Rng.int: bound must be positive');
+    if (!Number.isSafeInteger(bound) || bound <= 0)
+      throw new Error('Rng.int: bound must be positive');
     const b = BigInt(bound);
     const limit = (MASK64 / b) * b;
     for (;;) {

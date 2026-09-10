@@ -28,7 +28,10 @@ describe('match runner', { timeout: 180_000 }, () => {
   it('runs two bot processes through a full four-round match', async () => {
     const outcome = await runMatch({
       seed: 'smoke',
-      bots: { A: { name: 'naive', command: NAIVE }, B: { name: 'positional', command: POSITIONAL } },
+      bots: {
+        A: { name: 'naive', command: NAIVE },
+        B: { name: 'positional', command: POSITIONAL },
+      },
     });
     assert.equal(outcome.result.rounds.length, 4);
     assert.equal(outcome.result.scores.A + outcome.result.scores.B, 4);
@@ -41,7 +44,10 @@ describe('match runner', { timeout: 180_000 }, () => {
   it('produces a replay that reproduces every recorded state hash', async () => {
     const outcome = await runMatch({
       seed: 'reproduce',
-      bots: { A: { name: 'naive', command: NAIVE }, B: { name: 'positional', command: POSITIONAL } },
+      bots: {
+        A: { name: 'naive', command: NAIVE },
+        B: { name: 'positional', command: POSITIONAL },
+      },
     });
     const player = new ReplayPlayer(outcome.replay);
     let steps = 0;
@@ -56,7 +62,10 @@ describe('match runner', { timeout: 180_000 }, () => {
   it('writes keyframes that seek to the same state as playing straight through', async () => {
     const outcome = await runMatch({
       seed: 'seeking',
-      bots: { A: { name: 'naive', command: NAIVE }, B: { name: 'positional', command: POSITIONAL } },
+      bots: {
+        A: { name: 'naive', command: NAIVE },
+        B: { name: 'positional', command: POSITIONAL },
+      },
     });
     const replay = outcome.replay;
     assert.ok(replay.keyframes.length > 0, 'a four-round match should produce keyframes');
@@ -98,7 +107,10 @@ describe('match runner', { timeout: 180_000 }, () => {
       `,
     );
     await assert.rejects(
-      runMatch({ seed: 'greedy', bots: { A: { name: 'greedy', command: greedy }, B: { name: 'naive', command: NAIVE } } }),
+      runMatch({
+        seed: 'greedy',
+        bots: { A: { name: 'greedy', command: greedy }, B: { name: 'naive', command: NAIVE } },
+      }),
       (err: unknown) => err instanceof SpellbookRejected && err.side === 'A',
     );
   });
@@ -135,9 +147,14 @@ describe('match runner', { timeout: 180_000 }, () => {
       bots: { A: { name: 'sleeper', command: sleeper }, B: { name: 'naive', command: NAIVE } },
       onEvent: (l) => lines.push(l),
     });
-    assert.ok(lines.some((l) => l.includes('timed out')), 'the runner should report the timeout');
     assert.ok(
-      outcome.replay.turns.some((t: { side: string; actions: unknown }) => t.side === 'A' && t.actions === null),
+      lines.some((l) => l.includes('timed out')),
+      'the runner should report the timeout',
+    );
+    assert.ok(
+      outcome.replay.turns.some(
+        (t: { side: string; actions: unknown }) => t.side === 'A' && t.actions === null,
+      ),
       'the forfeited turn is recorded as null in the replay',
     );
     assert.equal(outcome.result.rounds.length, 4, 'the match still finishes all four rounds');

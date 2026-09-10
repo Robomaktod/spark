@@ -12,21 +12,31 @@ describe('the cast slot', () => {
     const round = flatRound();
     const wizard = round.wizards.A;
     const before = wizard.manaMilli;
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 7200, v: 40, chill: 0, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 7200, v: 40, chill: 0, dir: [1, 0] } },
+    });
     const cast = round.events.find((e) => e.t === 'cast');
     assert.ok(cast && cast.t === 'cast');
     assert.ok(cast.costMilli > 0);
     // Mana went down by the cost, then regen came back at end of turn.
     assert.equal(wizard.manaMilli, before - cast.costMilli + R.wizard.manaRegenMilli);
-    assert.ok(cast.at[0] > wizard.x + R.wizard.footprintRadius, 'the body manifests clear of the footprint');
+    assert.ok(
+      cast.at[0] > wizard.x + R.wizard.footprintRadius,
+      'the body manifests clear of the footprint',
+    );
   });
 
   it('refunds in full when the manifest area is blocked, but still spends the slot', () => {
     const round = flatRound();
     const wizard = round.wizards.A;
-    for (let y = 80; y < 120; y++) for (let x = 44; x < 60; x++) round.world.writeCell(x, y, 'stone');
+    for (let y = 80; y < 120; y++)
+      for (let x = 44; x < 60; x++) round.world.writeCell(x, y, 'stone');
     const before = wizard.manaMilli;
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 7200, v: 40, chill: 0, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 7200, v: 40, chill: 0, dir: [1, 0] } },
+    });
     assert.equal(round.objects.length, 0, 'nothing was manifested');
     assert.equal(wizard.manaMilli, before + R.wizard.manaRegenMilli, 'mana was fully refunded');
     assert.ok(round.events.some((e) => e.t === 'cast_failed' && e.reason.includes('blocked')));
@@ -34,21 +44,32 @@ describe('the cast slot', () => {
 
   it('rejects arguments outside the registered ranges rather than clamping them', () => {
     const round = flatRound();
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 99_999, v: 40, chill: 0, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 99_999, v: 40, chill: 0, dir: [1, 0] } },
+    });
     assert.equal(round.objects.length, 0);
-    assert.ok(round.events.some((e) => e.t === 'cast_failed' && e.reason.includes('registered range')));
+    assert.ok(
+      round.events.some((e) => e.t === 'cast_failed' && e.reason.includes('registered range')),
+    );
   });
 
   it('rejects a spell that is not in the book', () => {
     const round = flatRound({ spells: [DART] });
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 1000, v: 10, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 1000, v: 10, dir: [1, 0] } },
+    });
     assert.ok(round.events.some((e) => e.t === 'cast_failed'));
   });
 
   it('refuses a cast the wizard cannot pay for', () => {
     const round = flatRound();
     round.wizards.A.manaMilli = 1000;
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 8000, v: 60, chill: 0, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 8000, v: 60, chill: 0, dir: [1, 0] } },
+    });
     assert.equal(round.objects.length, 0);
     assert.ok(round.events.some((e) => e.t === 'cast_failed' && e.reason.includes('available')));
   });
@@ -71,7 +92,7 @@ describe('the cast slot', () => {
     assert.ok(tall >= 5, 'a full-density stone wall stands above flight altitude and gives cover');
   });
 
-  it('cannot afford the passport\'s own 50 kg stone wall at the published mana cap', () => {
+  it("cannot afford the passport's own 50 kg stone wall at the published mana cap", () => {
     // Passport §9 prices a 50 kg stone wall at 300 mana and calls it a
     // once-per-round investment; passport §4 caps mana at 150. Both cannot be
     // true. Passport §18 anticipates this: MANA_CAP's stated test is "raise it
@@ -81,16 +102,25 @@ describe('the cast slot', () => {
       spells: [
         {
           id: 'bigwall',
-          body: { shape: 'rect', length: 2, width: 10, material: 'stone', mass: { param: 'm', min: 50_000, max: 50_000 } },
+          body: {
+            shape: 'rect',
+            length: 2,
+            width: 10,
+            material: 'stone',
+            mass: { param: 'm', min: 50_000, max: 50_000 },
+          },
           launch: { direction: { param: 'dir', type: 'vec2' }, speed: 0 },
         },
       ],
     });
     round.wizards.A.manaMilli = R.wizard.manaCapMilli;
-    round.submit({ type: 'actions', cast: { spellId: 'bigwall', args: { m: 50_000, dir: [1, 0] } } });
+    round.submit({
+      type: 'actions',
+      cast: { spellId: 'bigwall', args: { m: 50_000, dir: [1, 0] } },
+    });
     assert.ok(
       round.events.some((e) => e.t === 'cast_failed'),
-      'the passport\'s own 50 kg wall is out of reach at a 150 mana cap',
+      "the passport's own 50 kg wall is out of reach at a 150 mana cap",
     );
   });
 
@@ -109,9 +139,17 @@ describe('reactions', () => {
     const worst = worstCaseCostMilliMana(DART, R);
     round.submit({
       type: 'actions',
-      react: { trigger: { kind: 'opponentWithinRadius', r: 3 }, spellId: 'dart', args: { m: 500, v: 20, dir: [1, 0] } },
+      react: {
+        trigger: { kind: 'opponentWithinRadius', r: 3 },
+        spellId: 'dart',
+        args: { m: 500, v: 20, dir: [1, 0] },
+      },
     });
-    assert.equal(wizard.reservedMilli, worst, 'the reservation is the worst case across the ranges');
+    assert.equal(
+      wizard.reservedMilli,
+      worst,
+      'the reservation is the worst case across the ranges',
+    );
     round.submit(PASS); // B's turn
     round.submit(PASS); // back to A: the reaction expires
     assert.equal(wizard.reservedMilli, 0);
@@ -119,7 +157,12 @@ describe('reactions', () => {
   });
 
   it('fires from the wand at the trigger point and spends only what the cast cost', () => {
-    const round = flatRound({ spawns: [[100, 100], [112, 100]] });
+    const round = flatRound({
+      spawns: [
+        [100, 100],
+        [112, 100],
+      ],
+    });
     round.submit({
       type: 'actions',
       react: {
@@ -138,10 +181,19 @@ describe('reactions', () => {
   });
 
   it('fires at most once per declaration', () => {
-    const round = flatRound({ spawns: [[100, 100], [112, 100]] });
+    const round = flatRound({
+      spawns: [
+        [100, 100],
+        [112, 100],
+      ],
+    });
     round.submit({
       type: 'actions',
-      react: { trigger: { kind: 'opponentWithinRadius', r: 30 }, spellId: 'dart', args: { m: 500, v: 20, dir: '$triggerPos' } },
+      react: {
+        trigger: { kind: 'opponentWithinRadius', r: 30 },
+        spellId: 'dart',
+        args: { m: 500, v: 20, dir: '$triggerPos' },
+      },
     });
     const fired = round.events.filter((e) => e.t === 'react_fired').length;
     round.submit(PASS);
@@ -153,20 +205,39 @@ describe('reactions', () => {
     round.wizards.A.manaMilli = 500;
     round.submit({
       type: 'actions',
-      react: { trigger: { kind: 'opponentCast' }, spellId: 'dart', args: { m: 500, v: 20, dir: [1, 0] } },
+      react: {
+        trigger: { kind: 'opponentCast' },
+        spellId: 'dart',
+        args: { m: 500, v: 20, dir: [1, 0] },
+      },
     });
     assert.equal(round.wizards.A.reservedMilli, 0);
   });
 
   it('fires on a hostile object entering the radius', () => {
-    const round = flatRound({ spawns: [[60, 100], [140, 100]] });
+    const round = flatRound({
+      spawns: [
+        [60, 100],
+        [140, 100],
+      ],
+    });
     round.submit(PASS); // A does nothing
-    round.submit({ type: 'actions', cast: { spellId: 'knife', args: { m: 7200, v: 20, chill: 0, dir: [-1, 0] } } });
     round.submit({
       type: 'actions',
-      react: { trigger: { kind: 'objectEnteredRadius', r: 60 }, spellId: 'dart', args: { m: 500, v: 40, dir: '$triggerObject' } },
+      cast: { spellId: 'knife', args: { m: 7200, v: 20, chill: 0, dir: [-1, 0] } },
     });
-    assert.ok(round.events.some((e) => e.t === 'react_fired'), 'an incoming knife should trip the interceptor');
+    round.submit({
+      type: 'actions',
+      react: {
+        trigger: { kind: 'objectEnteredRadius', r: 60 },
+        spellId: 'dart',
+        args: { m: 500, v: 40, dir: '$triggerObject' },
+      },
+    });
+    assert.ok(
+      round.events.some((e) => e.t === 'react_fired'),
+      'an incoming knife should trip the interceptor',
+    );
   });
 });
 
@@ -181,7 +252,10 @@ describe('channel commands', () => {
     const obj = round.objects[0]!;
     round.submit(PASS);
     const before = round.wizards.A.manaMilli;
-    round.submit({ type: 'actions', channel: { kind: 'impulse', objectId: obj.id, dir: [0, 1], speed: 20 } });
+    round.submit({
+      type: 'actions',
+      channel: { kind: 'impulse', objectId: obj.id, dir: [0, 1], speed: 20 },
+    });
     assert.ok(round.wizards.A.manaMilli < before + R.wizard.manaRegenMilli, 'a re-fire costs mana');
     assert.ok(round.events.some((e) => e.t === 'channel' && e.kind === 'impulse'));
   });
@@ -230,14 +304,21 @@ describe('turn packet', () => {
     const round = flatRound();
     round.submit({
       type: 'actions',
-      react: { trigger: { kind: 'opponentCast' }, spellId: 'dart', args: { m: 500, v: 20, dir: [1, 0] } },
+      react: {
+        trigger: { kind: 'opponentCast' },
+        spellId: 'dart',
+        args: { m: 500, v: 20, dir: [1, 0] },
+      },
     });
     const msg = round.turnMessage('B');
     assert.ok(!msg.events.some((e) => e.includes('armed')), 'a declaration is private');
   });
 
   function castLine(): ActionsMessage {
-    return { type: 'actions', cast: { spellId: 'knife', args: { m: 7200, v: 3, chill: -6000, dir: [1, 0] } } };
+    return {
+      type: 'actions',
+      cast: { spellId: 'knife', args: { m: 7200, v: 3, chill: -6000, dir: [1, 0] } },
+    };
   }
 });
 
@@ -263,8 +344,14 @@ describe('match structure', () => {
       idle.submit(PASS);
     }
     assert.equal(seen.length, 4);
-    assert.deepEqual(seen.map((s) => s.game), [1, 1, 2, 2]);
-    assert.deepEqual(seen.map((s) => s.first), ['A', 'B', 'A', 'B']);
+    assert.deepEqual(
+      seen.map((s) => s.game),
+      [1, 1, 2, 2],
+    );
+    assert.deepEqual(
+      seen.map((s) => s.first),
+      ['A', 'B', 'A', 'B'],
+    );
   });
 
   it('ties every round when neither bot acts, then draws on zero mana spent', () => {

@@ -71,7 +71,15 @@ function ledgerFor(events: readonly EngineEvent[], side: Side): TurnLedger {
   return l;
 }
 
-function SideLedger({ frame, side, name }: { frame: Frame; side: Side; name: string }): React.JSX.Element {
+function SideLedger({
+  frame,
+  side,
+  name,
+}: {
+  frame: Frame;
+  side: Side;
+  name: string;
+}): React.JSX.Element {
   const wizard = frame.round.wizards[side];
   const l = ledgerFor(frame.events, side);
   const closing = wizard.manaMilli;
@@ -79,7 +87,9 @@ function SideLedger({ frame, side, name }: { frame: Frame; side: Side; name: str
   // came in, plus what went out. If it disagrees with the player's own sum,
   // one of the two is wrong and that is worth knowing.
   const opening = closing - l.regen + l.spend;
-  const held = frame.round.objects.filter((o) => !o.destroyed && o.concentrated && o.owner === side);
+  const held = frame.round.objects.filter(
+    (o) => !o.destroyed && o.concentrated && o.owner === side,
+  );
 
   return (
     <div style={{ marginBottom: 18 }}>

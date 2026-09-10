@@ -120,7 +120,13 @@ runBot({
     // otherwise. An underpowered cast falls short and drops as inert matter, so
     // there is no point firing something that cannot reach.
     if (clearShot) {
-      const chill = declaredTemperatureFor(-200, 7200, 'ice', shapeCellCount({ shape: 'disc', radius: 2 }), ctx.rules);
+      const chill = declaredTemperatureFor(
+        -200,
+        7200,
+        'ice',
+        shapeCellCount({ shape: 'disc', radius: 2 }),
+        ctx.rules,
+      );
       const knifeArgs = { m: 7200, v: KNIFE_SPEED, chill, dir: aim };
       const knifeCost = ctx.cost('knife', knifeArgs);
       const affordable = knifeCost && knifeCost.total + reserveFor(ctx) <= msg.you.manaMilli;
@@ -174,7 +180,9 @@ function walkable(ctx: BotContext, from: Vec2, to: Vec2, maxSteps: number): Vec2
         [dx, 0],
         [0, dy],
       ];
-      const slide = slides.find(([sx, sy]) => (sx !== 0 || sy !== 0) && ctx.world.footprintLegal(x + sx, y + sy, ctx.rules));
+      const slide = slides.find(
+        ([sx, sy]) => (sx !== 0 || sy !== 0) && ctx.world.footprintLegal(x + sx, y + sy, ctx.rules),
+      );
       if (!slide) break;
       path.push(slide);
       x += slide[0];

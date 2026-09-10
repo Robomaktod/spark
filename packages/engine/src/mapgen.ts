@@ -68,10 +68,16 @@ export function generateMap(seed: string, rules: Rules, options: MapGenOptions =
   const margin = opts.spawnClearRadius + rules.wizard.footprintRadius + 2;
 
   // Spawns first, so every formation can be told to keep away from them.
-  const spawnA: Vec2 = [rng.range(margin, width - 1 - margin), rng.range(margin, height - 1 - margin)];
+  const spawnA: Vec2 = [
+    rng.range(margin, width - 1 - margin),
+    rng.range(margin, height - 1 - margin),
+  ];
   let spawnB: Vec2 = spawnA;
   for (let attempt = 0; attempt < 4096; attempt++) {
-    const candidate: Vec2 = [rng.range(margin, width - 1 - margin), rng.range(margin, height - 1 - margin)];
+    const candidate: Vec2 = [
+      rng.range(margin, width - 1 - margin),
+      rng.range(margin, height - 1 - margin),
+    ];
     if (ilen(candidate[0] - spawnA[0], candidate[1] - spawnA[1]) >= opts.minSpawnSeparation) {
       spawnB = candidate;
       break;
@@ -84,7 +90,8 @@ export function generateMap(seed: string, rules: Rules, options: MapGenOptions =
 
   const clearRadius = opts.spawnClearRadius;
   const keepClear = (x: number, y: number): boolean =>
-    ilen(x - spawnA[0], y - spawnA[1]) <= clearRadius || ilen(x - spawnB[0], y - spawnB[1]) <= clearRadius;
+    ilen(x - spawnA[0], y - spawnA[1]) <= clearRadius ||
+    ilen(x - spawnB[0], y - spawnB[1]) <= clearRadius;
 
   const place = (
     count: number,
@@ -107,7 +114,17 @@ export function generateMap(seed: string, rules: Rules, options: MapGenOptions =
   for (let i = 0; i < stoneCount; i++) {
     const cx = rng.range(6, width - 7);
     const cy = rng.range(6, height - 7);
-    stampBlob(world, rng, cx, cy, rng.range(4, 14), rng.range(4, 14), 'stone', rng.range(1200, 2000), keepClear);
+    stampBlob(
+      world,
+      rng,
+      cx,
+      cy,
+      rng.range(4, 14),
+      rng.range(4, 14),
+      'stone',
+      rng.range(1200, 2000),
+      keepClear,
+    );
   }
 
   // Water is flat: shots fly over it, wizards wade at double cost.

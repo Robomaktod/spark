@@ -11,7 +11,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WebSocket, WebSocketServer } from 'ws';
 import type { Server } from 'node:http';
-import type { ReplayFile, ReplayTurn } from '@spark/replay';
+import { finaliseLive, type ReplayFile, type ReplayTurn } from '@spark/replay';
 import { keyMatches } from './access.js';
 import { ReplaysService } from './replays.service.js';
 
@@ -88,7 +88,9 @@ export class LiveService {
         const existing = this.matches.get(id);
         if (existing) for (const w of existing.watchers) match.watchers.add(w);
         this.matches.set(id, match);
-        this.log.log(`live match ${id} started: ${msg.replay.bots.A.name} vs ${msg.replay.bots.B.name}`);
+        this.log.log(
+          `live match ${id} started: ${msg.replay.bots.A.name} vs ${msg.replay.bots.B.name}`,
+        );
         this.broadcast(match, { type: 'header', replay: match.header });
         return;
       }
@@ -121,6 +123,20 @@ export class LiveService {
     ws.on('close', () => {
       const match = this.matches.get(id);
       if (!match) return;
+      // The producer went away without an `end` frame: the CLI was stopped, or
+      // it crashed. The turns it did play are real, and whoever is holding the
+      // link should get to watch them rather than a 404 — so store what there
+      // is, marked partial.
+      if (match.turns.length > 0) {
+        try {
+          this.replays.save(finaliseLive(match.header, match.turns));
+          this.log.warn(
+            `live match ${id} was cut short after ${match.turns.length} turns; stored as partial`,
+          );
+        } catch (err) {
+          this.log.warn(`could not store the partial match ${id}: ${(err as Error).message}`);
+        }
+      }
       this.broadcast(match, { type: 'end' });
       this.matches.delete(id);
     });

@@ -241,7 +241,11 @@ export class Match {
     else {
       tiebreak = 'mana';
       winner =
-        this.manaSpent.A < this.manaSpent.B ? 'A' : this.manaSpent.B < this.manaSpent.A ? 'B' : null;
+        this.manaSpent.A < this.manaSpent.B
+          ? 'A'
+          : this.manaSpent.B < this.manaSpent.A
+            ? 'B'
+            : null;
       if (winner === null) tiebreak = 'draw';
     }
 
@@ -264,7 +268,12 @@ export class Match {
     else if (this.manaSpent.A === 0 && this.manaSpent.B === 0) tiebreak = 'draw';
     else {
       tiebreak = 'mana';
-      winner = this.manaSpent.A < this.manaSpent.B ? 'A' : this.manaSpent.B < this.manaSpent.A ? 'B' : null;
+      winner =
+        this.manaSpent.A < this.manaSpent.B
+          ? 'A'
+          : this.manaSpent.B < this.manaSpent.A
+            ? 'B'
+            : null;
       if (winner === null) tiebreak = 'draw';
     }
     return {

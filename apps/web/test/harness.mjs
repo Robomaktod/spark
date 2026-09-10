@@ -60,10 +60,20 @@ export function runMatchToFile(seed, outPath) {
   return new Promise((resolveRun, rejectRun) => {
     const cli = spawn(
       'node',
-      [fromRepo('apps/cli/dist/src/main.js'), 'run', '--seed', seed, '--quiet', '--replay', outPath],
+      [
+        fromRepo('apps/cli/dist/src/main.js'),
+        'run',
+        '--seed',
+        seed,
+        '--quiet',
+        '--replay',
+        outPath,
+      ],
       { cwd: REPO, stdio: 'ignore' },
     );
-    cli.on('exit', (code) => (code === 0 ? resolveRun(outPath) : rejectRun(new Error(`cli exited ${code}`))));
+    cli.on('exit', (code) =>
+      code === 0 ? resolveRun(outPath) : rejectRun(new Error(`cli exited ${code}`)),
+    );
   });
 }
 
@@ -75,7 +85,9 @@ export async function publishMatch(seed = 'webtest') {
       [fromRepo('apps/cli/dist/src/main.js'), 'run', '--seed', seed, '--quiet', '--publish', BASE],
       { cwd: REPO, stdio: 'ignore' },
     );
-    cli.on('exit', (code) => (code === 0 ? resolveRun() : rejectRun(new Error(`cli exited ${code}`))));
+    cli.on('exit', (code) =>
+      code === 0 ? resolveRun() : rejectRun(new Error(`cli exited ${code}`)),
+    );
   });
   const list = await (await fetch(BASE + '/api/replays')).json();
   if (list.length === 0) throw new Error('nothing was published');

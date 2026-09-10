@@ -6,6 +6,10 @@
   "description": "Spark wire protocol: types, tuning table, validators. Zero dependencies.",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
-  "exports": { ".": "./dist/src/index.js" },
-  "scripts": { "build": "tsc -b" }
+  "exports": {
+    ".": "./dist/src/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
 }
