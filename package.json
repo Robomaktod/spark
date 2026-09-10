@@ -21,7 +21,7 @@
     "build:packages": "tsc -b",
     "clean": "tsc -b --clean",
     "typecheck": "tsc -b && npm run typecheck --workspace @spark/web",
-    "test": "npm run build:packages && node --test packages/engine/dist/test/*.test.js apps/cli/dist/src/*.test.js",
+    "test": "npm run build:packages && node --test packages/engine/dist/test/*.test.js apps/cli/dist/src/*.test.js apps/server/dist/src/*.test.js",
     "test:web": "npm run build && npm run test --workspace @spark/web",
     "match": "npm run build:packages && node apps/cli/dist/src/main.js run",
     "demo": "npm run build:packages && node apps/cli/dist/src/main.js run --seed 7 --replay replays/demo.json && node apps/viewer-ascii/dist/src/main.js replays/demo.json",
