@@ -319,14 +319,29 @@ Three exist: the Newton seed in `isqrt`, the display formatting in
 `describeEvent`, and the `finishedAt` timestamp on a partial replay. Each is
 presentation or metadata, never simulation input.
 
-## D20 — An interrupted live match is stored, not discarded
+## D20 — A replay's file name is not its id
+
+**Chosen:** the storage index remembers the path each replay was found at, and
+reads go through that rather than reconstructing `<dir>/<id>.json`. A file whose
+id cannot be addressed is not listed at all.
+
+**Why:** the CLI lets a match be written anywhere the author likes
+(`spark run --replay replays/demo.json`), so a directory of replays is full of
+files whose names have nothing to do with their ids. The index was keyed by the
+id inside the file but `get` rebuilt the path from that id, so every replay not
+named `<id>.json` was advertised by the list and returned 404 when opened. An id
+the list hands out has to resolve — the web app links straight to it.
+
+This was the 404 seen in practice. D21 covers a second, unrelated cause.
+
+## D21 — An interrupted live match is stored, not discarded
 
 **Chosen:** when a live producer disconnects without an `end` frame, the relay
 stores the turns it did send, marked `partial: true`. The viewer says the match
 was cut short and shows them.
 
 **Why:** the previous behaviour deleted the match and left nothing on disk, so
-a link to it returned 404 — which is what a user hit. The turns played are real
+a link to it returned 404. The turns played are real
 and reproduce exactly; there is simply no result and there are no keyframes, so
 seeking backwards replays from the start of the round. A partial match is worth
 watching, and a 404 tells its holder nothing about why.

@@ -130,9 +130,9 @@ detail — see below.
 
 **When a document is wrong or self-contradictory, record it.** The passport and
 web plan contain several numbers that cannot all be true at once.
-[`docs/DECISIONS.md`](docs/DECISIONS.md) has eighteen entries explaining what
-was chosen and why. Add D19 rather than silently picking one and moving on. A
-future reader needs to know a choice was made.
+[`docs/DECISIONS.md`](docs/DECISIONS.md) explains what was chosen and why. Add
+the next entry rather than silently picking one and moving on. A future reader
+needs to know a choice was made.
 
 **Do not retune published constants on your own initiative.** Every number in
 `DEFAULT_RULES` is a starting value with a stated test in passport §18. Two of
